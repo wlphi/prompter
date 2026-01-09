@@ -55,6 +55,9 @@ class Teleprompter {
         // Line tracking for jump-to-next-line
         this.lineStartIndices = [];
 
+        // Match tolerance for dialect support (100 = exact, lower = fuzzy)
+        this.matchTolerance = 100;
+
         // Audio capture
         this.audioContext = null;
         this.mediaStream = null;
@@ -89,6 +92,11 @@ class Teleprompter {
         const speedSlider = document.getElementById('reading-speed');
         this.readingSpeed = parseInt(speedSlider.value);
         document.getElementById('speed-value').textContent = `${this.readingSpeed} CPM`;
+
+        // Apply match tolerance
+        const toleranceSlider = document.getElementById('match-tolerance');
+        this.matchTolerance = parseInt(toleranceSlider.value);
+        document.getElementById('tolerance-value').textContent = `${this.matchTolerance}%`;
     }
 
     bindEvents() {
@@ -235,6 +243,14 @@ class Teleprompter {
         speedSlider.addEventListener('input', (e) => {
             this.readingSpeed = parseInt(e.target.value);
             speedValue.textContent = `${this.readingSpeed} CPM`;
+        });
+
+        // Match tolerance slider
+        const toleranceSlider = document.getElementById('match-tolerance');
+        const toleranceValue = document.getElementById('tolerance-value');
+        toleranceSlider.addEventListener('input', (e) => {
+            this.matchTolerance = parseInt(e.target.value);
+            toleranceValue.textContent = `${this.matchTolerance}%`;
         });
     }
 
@@ -785,24 +801,47 @@ class Teleprompter {
     wordsMatch(spoken, script) {
         if (spoken === script) return true;
 
-        if (spoken.length < 3 || script.length < 3) {
+        // At 100% tolerance, require exact match
+        if (this.matchTolerance >= 100) return false;
+
+        // Short words need exact match
+        if (spoken.length < 2 || script.length < 2) {
             return spoken === script;
         }
 
-        const maxDiff = Math.floor(Math.max(spoken.length, script.length) * 0.3);
-        let diff = 0;
+        // Calculate Levenshtein distance
+        const distance = this.levenshtein(spoken, script);
+        const maxLen = Math.max(spoken.length, script.length);
+        const similarity = ((maxLen - distance) / maxLen) * 100;
 
-        const longer = spoken.length > script.length ? spoken : script;
-        const shorter = spoken.length > script.length ? script : spoken;
+        return similarity >= this.matchTolerance;
+    }
 
-        for (let i = 0; i < longer.length; i++) {
-            if (shorter[i] !== longer[i]) {
-                diff++;
-                if (diff > maxDiff) return false;
+    levenshtein(a, b) {
+        const matrix = [];
+
+        for (let i = 0; i <= b.length; i++) {
+            matrix[i] = [i];
+        }
+        for (let j = 0; j <= a.length; j++) {
+            matrix[0][j] = j;
+        }
+
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b[i - 1] === a[j - 1]) {
+                    matrix[i][j] = matrix[i - 1][j - 1];
+                } else {
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j - 1] + 1, // substitution
+                        matrix[i][j - 1] + 1,     // insertion
+                        matrix[i - 1][j] + 1      // deletion
+                    );
+                }
             }
         }
 
-        return true;
+        return matrix[b.length][a.length];
     }
 
     markWordAsSpoken(index) {

@@ -161,6 +161,13 @@ select, input[type="range"] {
     color: #fff;
 }
 
+small.hint {
+    display: block;
+    color: #888;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
 select:focus {
     outline: none;
     border-color: #e94560;

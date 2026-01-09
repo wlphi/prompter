@@ -4,7 +4,8 @@
       "Bash(git init:*)",
       "Bash(git remote add:*)",
       "Bash(git branch:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nVoice teleprompter with manual pacing controls\n\nFeatures:\n- Voice recognition mode with Vosk for hands-free script following\n- Manual mode with CPM-based auto-advance respecting punctuation pauses\n- Hold spacebar to advance word marker at reading speed\n- Double-tap spacebar to jump to next line\n- Emphasis notation: *word* for emphasis, **word** for strong \\(multi-word supported\\)\n- Stage directions [cues] and talking points {notes}\n- Configurable reading speed \\(300-2000 CPM\\)\n- Ctrl to pause/resume, arrow keys to adjust speed\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
