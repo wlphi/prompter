@@ -19,9 +19,11 @@
                     <div class="script-hints">
                         <span class="hint-cue">[cue]</span> Stage directions
                         <span class="hint-separator">•</span>
+                        <span class="hint-cue">[1]</span> Cue points
+                        <span class="hint-separator">•</span>
                         <span class="hint-notes">{notes}</span> Talking points
                         <span class="hint-separator">•</span>
-                        <span class="hint-emphasis">*slow*</span> Emphasis <span class="hint-strong">**hammer**</span> Strong
+                        <span class="hint-emphasis">*slow*</span> <span class="hint-strong">**hammer**</span>
                     </div>
                     <button type="button" id="import-md-btn" class="small-btn">Open .md</button>
                     <button type="button" id="export-md-btn" class="small-btn">Save .md</button>
@@ -110,6 +112,10 @@
                     <input type="checkbox" id="mirror-vertical">
                     Mirror Vertical
                 </label>
+                <label>
+                    <input type="checkbox" id="show-highlight" checked>
+                    Word Highlight
+                </label>
             </div>
 
             <div class="button-row">
@@ -183,6 +189,7 @@
                     <div class="shortcut-row"><kbd>Space</kbd><kbd>Space</kbd> <span>Double-tap: next line</span></div>
                     <div class="shortcut-row"><kbd>Ctrl</kbd> <span>Pause / Resume</span></div>
                     <div class="shortcut-row"><kbd>↑</kbd> <kbd>↓</kbd> <span>Adjust speed</span></div>
+                    <div class="shortcut-row"><kbd>0-9</kbd> <span>Jump to cue point</span></div>
                     <div class="shortcut-row"><kbd>Esc</kbd> <span>Stop presentation</span></div>
                     <div class="shortcut-row"><kbd>?</kbd> <span>Show this help</span></div>
                 </div>
@@ -191,6 +198,7 @@
                     <div class="shortcut-row"><code>*word*</code> <span>Emphasis (yellow)</span></div>
                     <div class="shortcut-row"><code>**word**</code> <span>Strong (red bold)</span></div>
                     <div class="shortcut-row"><code>[cue]</code> <span>Stage direction</span></div>
+                    <div class="shortcut-row"><code>[1]</code> <span>Numbered cue point</span></div>
                     <div class="shortcut-row"><code>{notes}</code> <span>Talking points</span></div>
                 </div>
             </div>

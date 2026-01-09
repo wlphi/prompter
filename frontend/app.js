@@ -19,6 +19,7 @@ class Teleprompter {
         this.scrollMarginValue = document.getElementById('scroll-margin-value');
         this.mirrorHorizontal = document.getElementById('mirror-horizontal');
         this.mirrorVertical = document.getElementById('mirror-vertical');
+        this.showHighlight = document.getElementById('show-highlight');
         this.startBtn = document.getElementById('start-btn');
         this.stopBtn = document.getElementById('stop-btn');
         this.restartBtn = document.getElementById('restart-btn');
@@ -57,6 +58,11 @@ class Teleprompter {
         // Line tracking for jump-to-next-line
         this.lineStartIndices = [];
 
+        // Numbered cue points for quick navigation
+        this.cuePoints = {}; // { cueNumber: { wordIndex, element } }
+        this.cueInputBuffer = '';
+        this.cueInputTimeout = null;
+
         // Match tolerance for dialect support (100 = exact, lower = fuzzy)
         this.matchTolerance = 100;
 
@@ -73,7 +79,6 @@ class Teleprompter {
 
     async init() {
         this.bindEvents();
-        this.setMode('voice'); // Initialize mode (hides speed slider)
         this.applyStoredSettings();
         await this.loadModels();
         await this.checkUrlForScript();
@@ -102,6 +107,14 @@ class Teleprompter {
         const toleranceSlider = document.getElementById('match-tolerance');
         this.matchTolerance = parseInt(toleranceSlider.value);
         document.getElementById('tolerance-value').textContent = `${this.matchTolerance}%`;
+
+        // Restore scroll mode from localStorage
+        const savedMode = localStorage.getItem('teleprompter-mode') || 'voice';
+        this.setMode(savedMode, false);
+
+        // Restore speech engine from localStorage
+        const savedEngine = localStorage.getItem('teleprompter-engine') || 'browser';
+        this.setSpeechEngine(savedEngine, false);
     }
 
     bindEvents() {
@@ -180,6 +193,13 @@ class Teleprompter {
                         this.scheduleHoldAdvance();
                     }
                 }, this.doubleTapThreshold);
+                return;
+            }
+
+            // Number keys for cue point navigation
+            if (/^[0-9]$/.test(e.key)) {
+                e.preventDefault();
+                this.handleCueInput(e.key);
                 return;
             }
 
@@ -293,14 +313,14 @@ class Teleprompter {
         document.getElementById('export-md-btn').addEventListener('click', () => this.exportMarkdown());
     }
 
-    setMode(mode) {
+    setMode(mode, save = true) {
         this.mode = mode;
         document.getElementById('mode-voice').classList.toggle('active', mode === 'voice');
         document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
-        // Speed slider is always visible now (used for both modes)
+        if (save) localStorage.setItem('teleprompter-mode', mode);
     }
 
-    setSpeechEngine(engine) {
+    setSpeechEngine(engine, save = true) {
         this.speechEngine = engine;
         document.getElementById('engine-browser').classList.toggle('active', engine === 'browser');
         document.getElementById('engine-vosk').classList.toggle('active', engine === 'vosk');
@@ -313,6 +333,7 @@ class Teleprompter {
         } else {
             hint.textContent = 'Offline recognition - requires backend server';
         }
+        if (save) localStorage.setItem('teleprompter-engine', engine);
     }
 
     importMarkdown(file) {
@@ -504,6 +525,18 @@ class Teleprompter {
     }
 
     async loadModels() {
+        const voskBtn = document.getElementById('engine-vosk');
+        const browserBtn = document.getElementById('engine-browser');
+
+        // Check browser speech support
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            browserBtn.disabled = true;
+            browserBtn.title = 'Not supported in this browser';
+            browserBtn.textContent = 'Browser (unsupported)';
+        }
+
+        // Check Vosk backend
         try {
             const response = await fetch('/api/models');
             if (!response.ok) {
@@ -515,18 +548,30 @@ class Teleprompter {
 
             if (!data.models || data.models.length === 0) {
                 this.modelSelect.innerHTML = '<option value="">No models found</option>';
-                return;
+                voskBtn.disabled = true;
+                voskBtn.title = 'No models available';
+                voskBtn.textContent = 'Vosk (no models)';
+            } else {
+                data.models.forEach(model => {
+                    const option = document.createElement('option');
+                    option.value = model.path;
+                    option.textContent = `${model.language.toUpperCase()} - ${model.name}`;
+                    this.modelSelect.appendChild(option);
+                });
             }
-
-            data.models.forEach(model => {
-                const option = document.createElement('option');
-                option.value = model.path;
-                option.textContent = `${model.language.toUpperCase()} - ${model.name}`;
-                this.modelSelect.appendChild(option);
-            });
         } catch (error) {
             console.error('Failed to load models:', error);
             this.modelSelect.innerHTML = '<option value="">Vosk backend not available</option>';
+            voskBtn.disabled = true;
+            voskBtn.title = 'Backend not available';
+            voskBtn.textContent = 'Vosk (offline)';
+        }
+
+        // If current selection is disabled, switch to the other
+        if (this.speechEngine === 'vosk' && voskBtn.disabled && !browserBtn.disabled) {
+            this.setSpeechEngine('browser');
+        } else if (this.speechEngine === 'browser' && browserBtn.disabled && !voskBtn.disabled) {
+            this.setSpeechEngine('vosk');
         }
     }
 
@@ -1019,6 +1064,7 @@ class Teleprompter {
         if (index + 1 < this.wordElements.length) {
             this.wordElements[index + 1].classList.add('current');
         }
+
     }
 
     advanceWord() {
@@ -1041,6 +1087,52 @@ class Teleprompter {
             this.updateProgress();
             this.scrollToCurrentWord();
         }
+    }
+
+    handleCueInput(digit) {
+        // Clear existing timeout
+        if (this.cueInputTimeout) {
+            clearTimeout(this.cueInputTimeout);
+        }
+
+        // Add digit to buffer
+        this.cueInputBuffer += digit;
+
+        // Show current input in status
+        this.recognitionStatus.textContent = `Cue: ${this.cueInputBuffer}`;
+
+        // Set timeout to execute jump
+        this.cueInputTimeout = setTimeout(() => {
+            const cueNumber = parseInt(this.cueInputBuffer);
+            this.cueInputBuffer = '';
+
+            const cuePoint = this.cuePoints[cueNumber];
+            if (cuePoint !== undefined) {
+                this.jumpToWord(cuePoint.wordIndex);
+
+                // Scroll to show the cue point separator at the top
+                if (cuePoint.element) {
+                    const container = document.getElementById('teleprompter-content');
+                    const targetOffset = container.clientHeight * (this.scrollMarginPercent / 100);
+                    const scrollTarget = cuePoint.element.offsetTop - targetOffset;
+                    container.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+                }
+
+                // Auto-pause so presenter can settle
+                if (!this.isScrollPaused) {
+                    this.toggleScrollPause();
+                }
+                this.recognitionStatus.textContent = `→ [${cueNumber}] PAUSED`;
+            } else {
+                this.recognitionStatus.textContent = `[${cueNumber}] not found`;
+                // Clear "not found" after a moment
+                setTimeout(() => {
+                    if (this.isRunning) {
+                        this.recognitionStatus.textContent = this.isScrollPaused ? 'PAUSED' : '';
+                    }
+                }, 1500);
+            }
+        }, 1000); // 1 second window
     }
 
     scrollToCurrentWord() {
@@ -1201,6 +1293,13 @@ class Teleprompter {
 
         // Scroll to top on start
         document.getElementById('teleprompter-content').scrollTop = 0;
+
+        // Apply highlight preference
+        if (this.showHighlight.checked) {
+            this.scriptDisplay.classList.remove('no-highlight');
+        } else {
+            this.scriptDisplay.classList.add('no-highlight');
+        }
     }
 
     buildScriptDisplay() {
@@ -1208,6 +1307,7 @@ class Teleprompter {
         this.wordElements = [];
         this.scriptWords = [];
         this.lineStartIndices = [0]; // First line always starts at index 0
+        this.cuePoints = {}; // Reset cue points
 
         const script = this.scriptInput.value.trim();
 
@@ -1220,7 +1320,24 @@ class Teleprompter {
             if (!part.trim()) return;
 
             if (part.startsWith('[') && part.endsWith(']')) {
-                // This is a cue/instruction - display but don't match
+                const content = part.slice(1, -1).trim();
+
+                // Check if this is a numbered cue point [1], [15], etc.
+                if (/^\d+$/.test(content)) {
+                    const cueNumber = parseInt(content);
+
+                    // Create visual separator for cue point
+                    const cueDiv = document.createElement('div');
+                    cueDiv.className = 'cue-point';
+                    cueDiv.innerHTML = `<span class="cue-number">${cueNumber}</span>`;
+                    this.scriptDisplay.appendChild(cueDiv);
+
+                    // Store both word index and element reference
+                    this.cuePoints[cueNumber] = { wordIndex, element: cueDiv };
+                    return;
+                }
+
+                // Regular cue/instruction - display but don't match
                 const span = document.createElement('span');
                 span.className = 'cue';
                 span.textContent = part;
@@ -1260,7 +1377,7 @@ class Teleprompter {
                         if (this.wordElements[nextIndex]) {
                             this.wordElements[nextIndex].classList.add('current');
                             this.scrollToCurrentWord();
-                        }
+                                            }
                     }
                 });
 

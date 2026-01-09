@@ -20,12 +20,14 @@ Then access via your server URL.
 **Speech Engines**
 - **Browser** - Uses Web Speech API, works in Chrome/Edge, 13+ languages
 - **Vosk** - Offline recognition, no data leaves your server
+- Unavailable options are automatically disabled
 
 **Pacing Controls**
 - Hold `Space` to advance words manually
 - Double-tap `Space` to jump to next line
 - `Ctrl` to pause/resume
 - `↑`/`↓` to adjust speed (CPM-based with punctuation pauses)
+- Number keys to jump to cue points (auto-pauses)
 - Press `?` for keyboard shortcuts
 
 **Dialect Support**
@@ -41,10 +43,19 @@ Regular text is matched by voice.
 
 [stage direction] shown but not voice-matched
 
+[1] numbered cue point (jump with number keys)
+[15] multi-digit cue points work too
+
 {talking points
 - click to advance
 - bullet list}
 ```
+
+**Display Options**
+- Adjustable font size and scroll position
+- Word highlight toggle (red box or subtle underline)
+- Horizontal/vertical mirroring
+- Settings persist across page reloads
 
 ## File Management
 
@@ -75,6 +86,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 | `Space` `Space` | Jump to next line |
 | `Ctrl` | Pause / Resume |
 | `↑` `↓` | Adjust speed |
+| `0-9` | Jump to cue point |
 | `Esc` | Stop presentation |
 | `?` | Show help |
 

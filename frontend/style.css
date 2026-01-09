@@ -258,6 +258,16 @@ input[type="range"]::-webkit-slider-thumb {
     color: #fff;
 }
 
+.mode-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.mode-btn:disabled:hover {
+    background: #16213e;
+    color: #888;
+}
+
 .checkbox-group {
     display: flex;
     gap: 2rem;
@@ -384,6 +394,13 @@ button.primary:active {
     animation: pulse 1s infinite;
 }
 
+.no-highlight .word.current {
+    background: none;
+    animation: none;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
 /* Emphasis markers */
 .word.emphasis {
     color: #ffd93d;
@@ -417,6 +434,27 @@ button.primary:active {
     padding: 2px 8px;
     margin: 0 4px;
     vertical-align: middle;
+}
+
+/* Numbered cue points for quick navigation */
+.cue-point {
+    display: block;
+    width: 100%;
+    margin: 1.5rem 0;
+    padding: 0.5rem 0;
+    border-top: 2px dashed rgba(78, 204, 163, 0.4);
+    text-align: left;
+}
+
+.cue-number {
+    display: inline-block;
+    background: #4ecca3;
+    color: #1a1a2e;
+    font-size: 0.5em;
+    font-weight: bold;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin-left: 0;
 }
 
 /* Notes sections - verbal clues that aren't read verbatim */
