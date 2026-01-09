@@ -60,6 +60,9 @@ class Teleprompter {
         // Match tolerance for dialect support (100 = exact, lower = fuzzy)
         this.matchTolerance = 100;
 
+        // Smooth scroll animation
+        this.scrollAnimationId = null;
+
         // Audio capture
         this.audioContext = null;
         this.mediaStream = null;
@@ -1055,10 +1058,45 @@ class Teleprompter {
         const elementTop = currentElement.offsetTop;
         const scrollTarget = elementTop - targetOffset;
 
-        container.scrollTo({
-            top: scrollTarget,
-            behavior: 'smooth'
-        });
+        // Start smooth animation toward target
+        this.animateScrollTo(container, scrollTarget);
+    }
+
+    animateScrollTo(container, target) {
+        // Cancel any existing animation
+        if (this.scrollAnimationId) {
+            cancelAnimationFrame(this.scrollAnimationId);
+        }
+
+        const animate = () => {
+            if (this.isScrollPaused) return;
+
+            const current = container.scrollTop;
+            const distance = target - current;
+
+            // If close enough, snap to target and stop
+            if (Math.abs(distance) < 3) {
+                container.scrollTop = target;
+                this.scrollAnimationId = null;
+                return;
+            }
+
+            // Quick easing - move 25% of remaining distance per frame
+            // with minimum step to avoid slow creeping
+            const minStep = 3;
+            let step = distance * 0.25;
+
+            // Enforce minimum step size (in the right direction)
+            if (Math.abs(step) < minStep) {
+                step = distance > 0 ? minStep : -minStep;
+            }
+
+            container.scrollTop = current + step;
+
+            this.scrollAnimationId = requestAnimationFrame(animate);
+        };
+
+        this.scrollAnimationId = requestAnimationFrame(animate);
     }
 
     updateProgress() {
@@ -1339,6 +1377,12 @@ class Teleprompter {
         if (this.advanceInterval) {
             clearTimeout(this.advanceInterval);
             this.advanceInterval = null;
+        }
+
+        // Cancel scroll animation
+        if (this.scrollAnimationId) {
+            cancelAnimationFrame(this.scrollAnimationId);
+            this.scrollAnimationId = null;
         }
 
         if (this.ws) {
