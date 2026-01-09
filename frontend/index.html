@@ -172,6 +172,32 @@
         </div>
     </div>
 
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcuts-modal" class="modal hidden">
+        <div class="modal-content shortcuts-content">
+            <h2>Keyboard Shortcuts</h2>
+            <div class="shortcuts-grid">
+                <div class="shortcut-section">
+                    <h3>During Presentation</h3>
+                    <div class="shortcut-row"><kbd>Space</kbd> <span>Hold to advance words</span></div>
+                    <div class="shortcut-row"><kbd>Space</kbd><kbd>Space</kbd> <span>Double-tap: next line</span></div>
+                    <div class="shortcut-row"><kbd>Ctrl</kbd> <span>Pause / Resume</span></div>
+                    <div class="shortcut-row"><kbd>↑</kbd> <kbd>↓</kbd> <span>Adjust speed</span></div>
+                    <div class="shortcut-row"><kbd>Esc</kbd> <span>Stop presentation</span></div>
+                    <div class="shortcut-row"><kbd>?</kbd> <span>Show this help</span></div>
+                </div>
+                <div class="shortcut-section">
+                    <h3>Script Formatting</h3>
+                    <div class="shortcut-row"><code>*word*</code> <span>Emphasis (yellow)</span></div>
+                    <div class="shortcut-row"><code>**word**</code> <span>Strong (red bold)</span></div>
+                    <div class="shortcut-row"><code>[cue]</code> <span>Stage direction</span></div>
+                    <div class="shortcut-row"><code>{notes}</code> <span>Talking points</span></div>
+                </div>
+            </div>
+            <button id="close-shortcuts-modal" class="primary">Got it</button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="/static/app.js"></script>
 </body>

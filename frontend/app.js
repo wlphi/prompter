@@ -128,9 +128,22 @@ class Teleprompter {
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
+            // ? shows shortcuts help (works anytime)
+            if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+                e.preventDefault();
+                this.toggleShortcutsModal();
+                return;
+            }
+
             if (!this.isRunning) return;
 
             if (e.key === 'Escape') {
+                // Close shortcuts modal if open, otherwise stop
+                const modal = document.getElementById('shortcuts-modal');
+                if (!modal.classList.contains('hidden')) {
+                    modal.classList.add('hidden');
+                    return;
+                }
                 this.stop();
                 return;
             }
@@ -220,6 +233,11 @@ class Teleprompter {
             }
         });
 
+        // Shortcuts modal
+        document.getElementById('close-shortcuts-modal').addEventListener('click', () => {
+            document.getElementById('shortcuts-modal').classList.add('hidden');
+        });
+
         // Fullscreen
         document.getElementById('fullscreen-btn').addEventListener('click', () => this.toggleFullscreen());
         document.addEventListener('fullscreenchange', () => this.updateFullscreenButton());
@@ -295,9 +313,17 @@ class Teleprompter {
     }
 
     importMarkdown(file) {
+        const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX_SIZE) {
+            alert('File too large. Maximum 5MB.');
+            return;
+        }
         const reader = new FileReader();
         reader.onload = (e) => {
             this.scriptInput.value = e.target.result;
+        };
+        reader.onerror = () => {
+            alert('Failed to read file.');
         };
         reader.readAsText(file);
     }
@@ -311,6 +337,11 @@ class Teleprompter {
         a.download = 'script.md';
         a.click();
         URL.revokeObjectURL(url);
+    }
+
+    toggleShortcutsModal() {
+        const modal = document.getElementById('shortcuts-modal');
+        modal.classList.toggle('hidden');
     }
 
     // Auto-advance controls - advances words based on CPM
@@ -472,11 +503,14 @@ class Teleprompter {
     async loadModels() {
         try {
             const response = await fetch('/api/models');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
             const data = await response.json();
 
             this.modelSelect.innerHTML = '';
 
-            if (data.models.length === 0) {
+            if (!data.models || data.models.length === 0) {
                 this.modelSelect.innerHTML = '<option value="">No models found</option>';
                 return;
             }
@@ -489,7 +523,7 @@ class Teleprompter {
             });
         } catch (error) {
             console.error('Failed to load models:', error);
-            this.modelSelect.innerHTML = '<option value="">Error loading models</option>';
+            this.modelSelect.innerHTML = '<option value="">Vosk backend not available</option>';
         }
     }
 
@@ -622,8 +656,12 @@ class Teleprompter {
             };
 
             this.ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                this.handleMessage(data);
+                try {
+                    const data = JSON.parse(event.data);
+                    this.handleMessage(data);
+                } catch (e) {
+                    console.error('Invalid JSON from server:', e);
+                }
             };
         });
     }
@@ -705,7 +743,10 @@ class Teleprompter {
         source.connect(this.processor);
         this.processor.connect(this.audioContext.destination);
 
-        // Start level monitoring
+        // Start level monitoring (clear any existing first)
+        if (this.levelInterval) {
+            clearInterval(this.levelInterval);
+        }
         this.levelInterval = setInterval(() => {
             if (!this.analyser) return;
             const dataArray = new Uint8Array(this.analyser.frequencyBinCount);

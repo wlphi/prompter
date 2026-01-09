@@ -849,6 +849,70 @@ button.primary:active {
     width: 100%;
 }
 
+/* Shortcuts modal */
+.shortcuts-content {
+    max-width: 500px;
+    text-align: left;
+}
+
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.shortcut-section h3 {
+    font-size: 0.9rem;
+    color: #e94560;
+    margin: 0 0 0.75rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.shortcut-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.shortcut-row span {
+    color: #aaa;
+}
+
+.shortcut-row kbd {
+    background: #0f3460;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    font-family: inherit;
+    font-size: 0.8rem;
+    color: #fff;
+    min-width: 1.5rem;
+    text-align: center;
+}
+
+.shortcut-row code {
+    background: #0f3460;
+    border-radius: 4px;
+    padding: 0.2rem 0.4rem;
+    font-family: monospace;
+    font-size: 0.8rem;
+    color: #ffd93d;
+}
+
+#close-shortcuts-modal {
+    width: 100%;
+}
+
+@media (max-width: 500px) {
+    .shortcuts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Setup panel save/load buttons */
 #save-btn, #load-btn {
     background: #333;

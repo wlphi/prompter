@@ -1,67 +1,90 @@
 # Voice-Activated Teleprompter
 
-Offline teleprompter with voice tracking. Uses [Vosk](https://alphacephei.com/vosk/) for speech recognition - no data leaves your server.
+Teleprompter with voice tracking for live presentations. Choose between browser-based speech recognition (easy setup) or offline Vosk (privacy-focused).
 
 ## Quick Start
 
+**Browser mode (no setup):**
+1. Open `frontend/index.html` in Chrome/Edge
+2. Paste your script, click Start
+3. Speak - words highlight as you read
+
+**Vosk mode (offline/private):**
 ```bash
-git clone <repo> /opt/teleprompter
-cd /opt/teleprompter
 ./deploy.sh
 ```
+Then access via your server URL.
 
-Put it behind a reverse proxy with SSL, then open in browser.
+## Features
 
-## How It Works
+**Speech Engines**
+- **Browser** - Uses Web Speech API, works in Chrome/Edge, 13+ languages
+- **Vosk** - Offline recognition, no data leaves your server
 
-1. Browser captures your mic audio
-2. Audio streams to server via WebSocket
-3. Vosk recognizes speech offline
-4. Words highlight as you speak
+**Pacing Controls**
+- Hold `Space` to advance words manually
+- Double-tap `Space` to jump to next line
+- `Ctrl` to pause/resume
+- `↑`/`↓` to adjust speed (CPM-based with punctuation pauses)
+- Press `?` for keyboard shortcuts
 
-## Cross-Device
+**Dialect Support**
+- Match Tolerance slider (50-100%)
+- Lower values enable fuzzy matching for dialects (Swiss German, etc.)
 
-Edit on desktop, present from mobile:
-
-1. Click **Save** → get a 5-character code + QR
-2. On mobile: enter code or scan QR
-3. Script loads with all settings
-
-No accounts needed. Scripts stored server-side.
-
-## Script Syntax
-
-Regular text is matched by voice. Two special markers:
-
+**Script Markup**
 ```
-And that's why [change slide] we need this.
-```
-`[brackets]` = stage directions, shown but not matched
+Regular text is matched by voice.
 
-```
-{Key points to cover:
-- Started in 2020
-- Team of 3}
-```
-`{braces}` = talking points, click to advance
+*emphasis* renders yellow/underlined
+**strong** renders red/bold (multi-word spans work)
 
-## Manual Setup
+[stage direction] shown but not voice-matched
+
+{talking points
+- click to advance
+- bullet list}
+```
+
+## File Management
+
+- **Open .md** - Load script from markdown file
+- **Save .md** - Export script to markdown
+- **Save/Load** - Cross-device sync via 5-char code or QR
+
+## Manual Setup (Vosk)
 
 ```bash
 cd /opt/teleprompter/backend
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-# Get a model from https://alphacephei.com/vosk/models
+# Download a model from https://alphacephei.com/vosk/models
 mkdir -p models && cd models
-wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
-unzip vosk-model-small-en-us-0.15.zip
+wget https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip
+unzip vosk-model-small-de-0.15.zip
 
-# Run
-cd .. && uvicorn main:app --host 0.0.0.0 --port 8000
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-## Reverse Proxy
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Space` (hold) | Advance words |
+| `Space` `Space` | Jump to next line |
+| `Ctrl` | Pause / Resume |
+| `↑` `↓` | Adjust speed |
+| `Esc` | Stop presentation |
+| `?` | Show help |
+
+## Troubleshooting
+
+- **Mic not working?** Browser mode needs HTTPS in production. Check permissions.
+- **Vosk not connecting?** Ensure backend is running, check WebSocket proxy config.
+- **Test page:** `/static/test.html` shows mic levels and device info.
+
+## Reverse Proxy (Vosk mode)
 
 Needs WebSocket support. For Caddy:
 ```
@@ -69,12 +92,6 @@ teleprompter.example.com {
     reverse_proxy localhost:8000
 }
 ```
-
-## Troubleshooting
-
-**Mic not working?** Must use HTTPS. Check browser permissions.
-
-**Test page:** `/static/test.html` shows mic levels and device info.
 
 ## License
 
