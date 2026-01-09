@@ -1,0 +1,6 @@
+vosk>=0.3.45
+pyaudio>=0.2.14
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-pptx>=0.6.21
+python-multipart>=0.0.6

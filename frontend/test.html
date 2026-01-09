@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mic Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #1a1a2e; color: #fff; }
+        #level { width: 300px; height: 30px; background: #333; margin: 20px 0; }
+        #levelBar { height: 100%; background: #4ecca3; width: 0%; transition: width 0.1s; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-right: 10px; }
+        select { padding: 10px; font-size: 16px; margin: 10px 0; width: 100%; max-width: 500px; }
+        #log { background: #000; padding: 10px; margin-top: 20px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Microphone Test</h1>
+
+    <label>Select your microphone:</label>
+    <select id="deviceSelect"><option value="">Loading devices...</option></select>
+
+    <div>
+        <button onclick="startTest()">Start Mic Test</button>
+        <button onclick="stopTest()">Stop</button>
+    </div>
+
+    <div id="level"><div id="levelBar"></div></div>
+    <div>Level: <span id="levelText">-</span></div>
+    <div id="log"></div>
+
+    <script>
+        let audioContext, analyser, mediaStream, interval;
+
+        const log = (msg) => {
+            console.log(msg);
+            document.getElementById('log').textContent += msg + '\n';
+        };
+
+        async function loadDevices() {
+            // First request permission to get device labels
+            try {
+                const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                tempStream.getTracks().forEach(t => t.stop());
+            } catch (e) {
+                log('Need microphone permission first');
+            }
+
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const select = document.getElementById('deviceSelect');
+            select.innerHTML = '';
+
+            const audioInputs = devices.filter(d => d.kind === 'audioinput');
+            log('Found ' + audioInputs.length + ' audio input devices:');
+
+            audioInputs.forEach((device, i) => {
+                log('  ' + i + ': ' + device.label + ' (id: ' + device.deviceId.substring(0, 20) + '...)');
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.textContent = device.label || ('Microphone ' + (i + 1));
+                // Skip monitor devices by default
+                if (device.label.toLowerCase().includes('monitor')) {
+                    option.textContent += ' (SYSTEM AUDIO - not mic)';
+                }
+                select.appendChild(option);
+            });
+
+            // Try to select a real microphone by default
+            for (const opt of select.options) {
+                if (!opt.textContent.toLowerCase().includes('monitor')) {
+                    opt.selected = true;
+                    break;
+                }
+            }
+        }
+
+        async function startTest() {
+            document.getElementById('log').textContent = '';
+            const deviceId = document.getElementById('deviceSelect').value;
+
+            try {
+                log('Requesting microphone (device: ' + deviceId.substring(0, 20) + '...)');
+
+                const constraints = {
+                    audio: deviceId ? { deviceId: { exact: deviceId } } : true
+                };
+
+                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                log('Got media stream');
+
+                const tracks = mediaStream.getAudioTracks();
+                log('Audio tracks: ' + tracks.length);
+                if (tracks[0]) {
+                    log('Track label: ' + tracks[0].label);
+                    log('Track settings: ' + JSON.stringify(tracks[0].getSettings(), null, 2));
+                }
+
+                log('Creating AudioContext...');
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                log('AudioContext state: ' + audioContext.state);
+                log('Sample rate: ' + audioContext.sampleRate);
+
+                if (audioContext.state === 'suspended') {
+                    log('Resuming AudioContext...');
+                    await audioContext.resume();
+                    log('AudioContext state after resume: ' + audioContext.state);
+                }
+
+                const source = audioContext.createMediaStreamSource(mediaStream);
+                log('Created media stream source');
+
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+                log('Connected analyser');
+
+                interval = setInterval(() => {
+                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    analyser.getByteFrequencyData(dataArray);
+                    const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+                    const level = Math.round(avg * 100 / 255);
+
+                    document.getElementById('levelBar').style.width = level + '%';
+                    document.getElementById('levelText').textContent = level + '%';
+                }, 100);
+
+                log('Monitoring started - speak into your mic!');
+            } catch (err) {
+                log('ERROR: ' + err.name + ': ' + err.message);
+            }
+        }
+
+        function stopTest() {
+            if (interval) clearInterval(interval);
+            if (audioContext) audioContext.close();
+            if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+            log('Stopped');
+        }
+
+        // Load devices on page load
+        loadDevices();
+    </script>
+</body>
+</html>

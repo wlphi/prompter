@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice-Activated Teleprompter</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Setup Panel -->
+        <div id="setup-panel" class="panel">
+            <h1>Voice-Activated Teleprompter</h1>
+
+            <div class="form-group">
+                <label for="script-input">Your Script:</label>
+                <textarea id="script-input" placeholder="Paste your script here..."></textarea>
+                <div class="script-toolbar">
+                    <div class="script-hints">
+                        <span class="hint-cue">[cue]</span> Stage directions
+                        <span class="hint-separator">•</span>
+                        <span class="hint-notes">{notes}</span> Talking points
+                        <span class="hint-separator">•</span>
+                        <span class="hint-emphasis">*slow*</span> Emphasis <span class="hint-strong">**hammer**</span> Strong
+                    </div>
+                    <button type="button" id="import-pptx-btn" class="small-btn">Import PPTX <span class="beta-tag">beta</span></button>
+                    <input type="file" id="pptx-file-input" accept=".pptx" hidden>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="model-select">Language Model:</label>
+                <select id="model-select">
+                    <option value="">Loading models...</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="font-size">Font Size: <span id="font-size-value">48px</span></label>
+                    <input type="range" id="font-size" min="24" max="120" value="48">
+                </div>
+                <div class="form-group">
+                    <label for="scroll-margin">Scroll Position: <span id="scroll-margin-value">30%</span></label>
+                    <input type="range" id="scroll-margin" min="10" max="50" value="30">
+                </div>
+            </div>
+
+            <div id="preview-box">
+                <div id="preview-text">Sample text preview</div>
+                <div id="preview-line"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Scroll Mode:</label>
+                <div class="mode-toggle">
+                    <button type="button" id="mode-voice" class="mode-btn active">Voice Follow</button>
+                    <button type="button" id="mode-manual" class="mode-btn">Manual Scroll</button>
+                </div>
+            </div>
+
+            <div class="form-group" id="speed-group">
+                <label for="reading-speed">Reading Speed: <span id="speed-value">900 CPM</span></label>
+                <input type="range" id="reading-speed" min="300" max="2000" step="50" value="900">
+            </div>
+
+            <div class="form-group checkbox-group">
+                <label>
+                    <input type="checkbox" id="mirror-horizontal">
+                    Mirror Horizontal
+                </label>
+                <label>
+                    <input type="checkbox" id="mirror-vertical">
+                    Mirror Vertical
+                </label>
+            </div>
+
+            <div class="button-row">
+                <button id="save-btn">Save</button>
+                <button id="load-btn">Load</button>
+                <button id="start-btn" class="primary">Start Teleprompter</button>
+            </div>
+
+            <div id="status-bar">
+                <span id="connection-status">Ready</span>
+                <span id="recognition-status"></span>
+            </div>
+        </div>
+
+        <!-- Teleprompter View -->
+        <div id="teleprompter" class="hidden">
+            <div id="teleprompter-content">
+                <div id="script-display"></div>
+            </div>
+            <div id="teleprompter-controls">
+                <span id="language-indicator"></span>
+                <span id="speed-indicator" class="hidden"></span>
+                <button id="fullscreen-btn">Fullscreen</button>
+                <button id="stop-btn">Stop</button>
+                <button id="restart-btn">Restart</button>
+                <span id="progress-indicator">0 / 0</span>
+                <div id="live-transcription"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Modal -->
+    <div id="save-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Script Saved</h2>
+            <div class="code-display">
+                <span id="save-code"></span>
+                <button id="copy-code-btn" title="Copy code">Copy</button>
+            </div>
+            <div id="qr-code"></div>
+            <div class="url-display">
+                <input type="text" id="save-url" readonly>
+                <button id="copy-url-btn" title="Copy URL">Copy</button>
+            </div>
+            <p class="modal-hint">Scan QR or enter code on another device</p>
+            <button id="close-save-modal" class="primary">Done</button>
+        </div>
+    </div>
+
+    <!-- Load Modal -->
+    <div id="load-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>Load Script</h2>
+            <div class="load-input">
+                <input type="text" id="load-code-input" placeholder="Enter code" maxlength="5">
+            </div>
+            <p id="load-error" class="error-text hidden"></p>
+            <button id="load-code-btn" class="primary">Load</button>
+            <button id="close-load-modal">Cancel</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="/static/app.js"></script>
+</body>
+</html>
