@@ -40,6 +40,8 @@ class Teleprompter {
         this.isRunning = false;
         this.scrollMarginPercent = 30;
         this.mode = 'voice'; // 'voice' or 'manual'
+        this.speechEngine = 'browser'; // 'browser' or 'vosk'
+        this.webSpeechRecognition = null;
 
         // Auto-advance state
         this.readingSpeed = 900; // characters per minute
@@ -252,6 +254,22 @@ class Teleprompter {
             this.matchTolerance = parseInt(e.target.value);
             toleranceValue.textContent = `${this.matchTolerance}%`;
         });
+
+        // Speech engine toggle
+        document.getElementById('engine-browser').addEventListener('click', () => this.setSpeechEngine('browser'));
+        document.getElementById('engine-vosk').addEventListener('click', () => this.setSpeechEngine('vosk'));
+
+        // Import/Export .md files
+        document.getElementById('import-md-btn').addEventListener('click', () => {
+            document.getElementById('md-file-input').click();
+        });
+        document.getElementById('md-file-input').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.importMarkdown(e.target.files[0]);
+                e.target.value = '';
+            }
+        });
+        document.getElementById('export-md-btn').addEventListener('click', () => this.exportMarkdown());
     }
 
     setMode(mode) {
@@ -259,6 +277,40 @@ class Teleprompter {
         document.getElementById('mode-voice').classList.toggle('active', mode === 'voice');
         document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
         // Speed slider is always visible now (used for both modes)
+    }
+
+    setSpeechEngine(engine) {
+        this.speechEngine = engine;
+        document.getElementById('engine-browser').classList.toggle('active', engine === 'browser');
+        document.getElementById('engine-vosk').classList.toggle('active', engine === 'vosk');
+        document.getElementById('model-group').style.display = engine === 'vosk' ? 'block' : 'none';
+        document.getElementById('browser-lang-group').style.display = engine === 'browser' ? 'block' : 'none';
+
+        const hint = document.getElementById('engine-hint');
+        if (engine === 'browser') {
+            hint.textContent = 'Uses browser speech recognition - works in Chrome/Edge';
+        } else {
+            hint.textContent = 'Offline recognition - requires backend server';
+        }
+    }
+
+    importMarkdown(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            this.scriptInput.value = e.target.result;
+        };
+        reader.readAsText(file);
+    }
+
+    exportMarkdown() {
+        const content = this.scriptInput.value;
+        const blob = new Blob([content], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'script.md';
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     // Auto-advance controls - advances words based on CPM
@@ -752,6 +804,76 @@ class Teleprompter {
         }
     }
 
+    // WebSpeech API recognition
+    async startWebSpeechRecognition() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            throw { name: 'NotSupportedError', message: 'Speech recognition not supported' };
+        }
+
+        this.webSpeechRecognition = new SpeechRecognition();
+        this.webSpeechRecognition.continuous = true;
+        this.webSpeechRecognition.interimResults = true;
+        this.webSpeechRecognition.lang = document.getElementById('browser-lang').value;
+
+        this.webSpeechRecognition.onresult = (event) => {
+            if (!this.isRunning || this.isScrollPaused) return;
+
+            // Get latest results
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                const words = transcript.trim().split(/\s+/);
+
+                // Update live transcription
+                const liveTranscription = document.getElementById('live-transcription');
+                if (liveTranscription) {
+                    liveTranscription.textContent = transcript;
+                }
+
+                // Match words
+                if (words.length > 0) {
+                    this.matchWords(words);
+                }
+            }
+        };
+
+        this.webSpeechRecognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            if (event.error === 'not-allowed') {
+                this.recognitionStatus.textContent = 'Microphone access denied';
+            } else if (event.error === 'no-speech') {
+                // Restart on no-speech
+                if (this.isRunning) {
+                    this.webSpeechRecognition.start();
+                }
+            } else {
+                this.recognitionStatus.textContent = `Error: ${event.error}`;
+            }
+        };
+
+        this.webSpeechRecognition.onend = () => {
+            // Auto-restart if still running
+            if (this.isRunning && !this.isScrollPaused) {
+                try {
+                    this.webSpeechRecognition.start();
+                } catch (e) {
+                    // Already started
+                }
+            }
+        };
+
+        this.webSpeechRecognition.start();
+        this.recognitionStatus.textContent = 'Listening...';
+    }
+
+    stopWebSpeechRecognition() {
+        if (this.webSpeechRecognition) {
+            this.webSpeechRecognition.onend = null; // Prevent auto-restart
+            this.webSpeechRecognition.stop();
+            this.webSpeechRecognition = null;
+        }
+    }
+
     matchWords(spokenWords) {
         const searchStart = this.currentWordIndex;
         const searchEnd = Math.min(this.currentWordIndex + 15, this.scriptWords.length);
@@ -924,23 +1046,30 @@ class Teleprompter {
         this.currentWordIndex = 0;
         this.buildScriptDisplay();
 
-        // Voice mode requires model and microphone
+        // Voice mode requires microphone
         if (this.mode === 'voice') {
-            const modelPath = this.modelSelect.value;
-            if (!modelPath) {
-                alert('Please select a language model.');
-                return;
-            }
-
             try {
-                // Connect WebSocket
-                this.connectionStatus.textContent = 'Connecting...';
-                await this.connectWebSocket();
+                if (this.speechEngine === 'browser') {
+                    // Use browser WebSpeech API
+                    this.connectionStatus.textContent = 'Browser';
+                    this.recognitionStatus.textContent = 'Starting...';
+                    await this.startWebSpeechRecognition();
+                } else {
+                    // Use Vosk backend
+                    const modelPath = this.modelSelect.value;
+                    if (!modelPath) {
+                        alert('Please select a language model.');
+                        return;
+                    }
 
-                // Start audio capture and recognition
-                this.recognitionStatus.textContent = 'Starting microphone...';
-                await this.startAudioCapture(modelPath);
+                    // Connect WebSocket
+                    this.connectionStatus.textContent = 'Connecting...';
+                    await this.connectWebSocket();
 
+                    // Start audio capture and recognition
+                    this.recognitionStatus.textContent = 'Starting microphone...';
+                    await this.startAudioCapture(modelPath);
+                }
             } catch (error) {
                 console.error('Start error:', error);
                 let msg = error?.message || String(error) || 'Unknown error';
@@ -948,11 +1077,12 @@ class Teleprompter {
                     msg = 'Microphone access denied. Please allow microphone access and try again.';
                 } else if (error?.name === 'NotFoundError') {
                     msg = 'No microphone found. Please connect a microphone and try again.';
-                } else if (error?.name === 'NotReadableError') {
-                    msg = 'Microphone is in use by another application.';
+                } else if (error?.name === 'NotSupportedError') {
+                    msg = 'Speech recognition not supported in this browser. Try Chrome or Edge.';
                 }
                 alert(`Failed to start: ${msg}`);
                 this.stopAudioCapture();
+                this.stopWebSpeechRecognition();
                 return;
             }
         } else {
@@ -972,10 +1102,15 @@ class Teleprompter {
         // Show mode indicator
         const langIndicator = document.getElementById('language-indicator');
         if (this.mode === 'voice') {
-            const selectedOption = this.modelSelect.options[this.modelSelect.selectedIndex];
-            if (langIndicator && selectedOption) {
-                const langMatch = selectedOption.textContent.match(/^([A-Z-]+)/i);
-                langIndicator.textContent = langMatch ? langMatch[1] : 'Unknown';
+            if (this.speechEngine === 'browser') {
+                const lang = document.getElementById('browser-lang').value;
+                langIndicator.textContent = lang.split('-')[0].toUpperCase();
+            } else {
+                const selectedOption = this.modelSelect.options[this.modelSelect.selectedIndex];
+                if (selectedOption) {
+                    const langMatch = selectedOption.textContent.match(/^([A-Z-]+)/i);
+                    langIndicator.textContent = langMatch ? langMatch[1] : 'Unknown';
+                }
             }
         } else {
             langIndicator.textContent = 'MANUAL';
@@ -1155,6 +1290,7 @@ class Teleprompter {
     stop() {
         this.isRunning = false;
         this.stopAudioCapture();
+        this.stopWebSpeechRecognition();
         this.stopAutoAdvance();
 
         // Clear hold-to-advance state

@@ -23,15 +23,46 @@
                         <span class="hint-separator">•</span>
                         <span class="hint-emphasis">*slow*</span> Emphasis <span class="hint-strong">**hammer**</span> Strong
                     </div>
+                    <button type="button" id="import-md-btn" class="small-btn">Open .md</button>
+                    <button type="button" id="export-md-btn" class="small-btn">Save .md</button>
                     <button type="button" id="import-pptx-btn" class="small-btn">Import PPTX <span class="beta-tag">beta</span></button>
+                    <input type="file" id="md-file-input" accept=".md,.txt" hidden>
                     <input type="file" id="pptx-file-input" accept=".pptx" hidden>
                 </div>
             </div>
 
             <div class="form-group">
+                <label>Speech Engine:</label>
+                <div class="mode-toggle">
+                    <button type="button" id="engine-browser" class="mode-btn active">Browser (easy)</button>
+                    <button type="button" id="engine-vosk" class="mode-btn">Vosk (offline)</button>
+                </div>
+                <small class="hint" id="engine-hint">Uses browser speech recognition - works in Chrome/Edge</small>
+            </div>
+
+            <div class="form-group" id="model-group" style="display: none;">
                 <label for="model-select">Language Model:</label>
                 <select id="model-select">
                     <option value="">Loading models...</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="browser-lang-group">
+                <label for="browser-lang">Language:</label>
+                <select id="browser-lang">
+                    <option value="de-DE">German (Deutsch)</option>
+                    <option value="de-CH">German - Swiss (Schweizerdeutsch)</option>
+                    <option value="en-US">English (US)</option>
+                    <option value="en-GB">English (UK)</option>
+                    <option value="fr-FR">French (Français)</option>
+                    <option value="it-IT">Italian (Italiano)</option>
+                    <option value="es-ES">Spanish (Español)</option>
+                    <option value="pt-BR">Portuguese (Português)</option>
+                    <option value="nl-NL">Dutch (Nederlands)</option>
+                    <option value="pl-PL">Polish (Polski)</option>
+                    <option value="ru-RU">Russian (Русский)</option>
+                    <option value="ja-JP">Japanese (日本語)</option>
+                    <option value="zh-CN">Chinese (中文)</option>
                 </select>
             </div>
 
