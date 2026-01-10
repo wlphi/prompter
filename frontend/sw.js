@@ -1,4 +1,4 @@
-const CACHE_NAME = 'teleprompter-v1';
+const CACHE_NAME = 'teleprompter-v3';
 const ASSETS = [
   '/static/index.html',
   '/static/app.js',

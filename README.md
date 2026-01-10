@@ -55,7 +55,13 @@ Regular text is matched by voice.
 - Adjustable font size and scroll position
 - Word highlight toggle (red box or subtle underline)
 - Horizontal/vertical mirroring
+- Auto-fullscreen when presentation starts
 - Settings persist across page reloads
+
+**PWA Support**
+- Installable on mobile and desktop
+- Works without browser chrome when installed
+- Caches assets for faster loading
 
 ## File Management
 
@@ -102,6 +108,21 @@ Needs WebSocket support. For Caddy:
 ```
 teleprompter.example.com {
     reverse_proxy localhost:8000
+}
+```
+
+**With authentication:** PWA files must bypass auth for install to work:
+```
+teleprompter.example.com {
+    @pwa path /static/manifest.json /static/sw.js /static/icon-*.png
+    handle @pwa {
+        reverse_proxy localhost:8000
+    }
+
+    handle {
+        # your auth config here
+        reverse_proxy localhost:8000
+    }
 }
 ```
 

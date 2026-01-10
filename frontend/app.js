@@ -1267,6 +1267,11 @@ class Teleprompter {
         this.setupPanel.classList.add('hidden');
         this.teleprompterView.classList.remove('hidden');
         this.isRunning = true;
+
+        // Auto-enter fullscreen on presentation start
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        }
         this.updateProgress();
         this.updateMirror();
 
