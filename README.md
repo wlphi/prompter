@@ -27,7 +27,7 @@ Then access via your server URL.
 - Double-tap `Space` to jump to next line
 - `Ctrl` to pause/resume
 - `↑`/`↓` to adjust speed (CPM-based with punctuation pauses)
-- Number keys to jump to cue points (auto-pauses)
+- Number keys to jump to quick-nav cue points (auto-pauses)
 - Press `?` for keyboard shortcuts
 
 **Dialect Support**
@@ -43,8 +43,8 @@ Regular text is matched by voice.
 
 [stage direction] shown but not voice-matched
 
-[1] numbered cue point (jump with number keys)
-[15] multi-digit cue points work too
+[1] quick-nav cue point (jump with number keys)
+[15] multi-digit quick-nav points work too
 
 {talking points
 - click to advance
@@ -86,7 +86,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 | `Space` `Space` | Jump to next line |
 | `Ctrl` | Pause / Resume |
 | `↑` `↓` | Adjust speed |
-| `0-9` | Jump to cue point |
+| `0-9` | Jump to quick-nav |
 | `Esc` | Stop presentation |
 | `?` | Show help |
 
