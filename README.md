@@ -2,6 +2,13 @@
 
 Teleprompter with voice tracking for live presentations. Choose between browser-based speech recognition (easy setup) or offline Vosk (privacy-focused).
 
+## Screenshots
+### Settings
+<img width="3490" height="2812" alt="Screenshot 2026-01-10 at 14-44-01 Voice Teleprompter" src="https://github.com/user-attachments/assets/6d3a29a0-23d6-4042-b5fb-50714d774092" />
+
+### Prompter Mode
+<img width="1920" height="1080" alt="Bildschirmfoto_20260110_144520" src="https://github.com/user-attachments/assets/11edba6d-cb0b-486f-980e-4dc923bf8745" />
+
 ## Quick Start
 
 **Browser mode (no setup):**
@@ -50,6 +57,7 @@ Regular text is matched by voice.
 - click to advance
 - bullet list}
 ```
+
 
 **Display Options**
 - Adjustable font size and scroll position
