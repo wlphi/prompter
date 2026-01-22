@@ -5,6 +5,33 @@
  * and highlights/scrolls the script as the user speaks.
  */
 
+// Default settings
+const DEFAULT_SETTINGS = {
+    fontSize: 48,
+    scrollMargin: 30,
+    mode: 'voice',
+    engine: 'browser',
+    readingSpeed: 900,
+    matchTolerance: 100,
+    mirrorHorizontal: false,
+    mirrorVertical: false,
+    showHighlight: true,
+    highlightColor: '#e94560',
+    browserLang: 'en-US',
+    theme: 'system'
+};
+
+// Apply theme immediately to avoid flash
+(function() {
+    const savedTheme = localStorage.getItem('teleprompter-theme') || 'system';
+    if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else if (savedTheme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+    // 'system' uses CSS media query, no attribute needed
+})();
+
 class Teleprompter {
     constructor() {
         // DOM elements
@@ -84,48 +111,145 @@ class Teleprompter {
         await this.checkUrlForScript();
     }
 
-    applyStoredSettings() {
-        // Apply font size from slider (browser may have restored it)
-        const fontSize = this.fontSizeSlider.value;
+    getSetting(key) {
+        const saved = localStorage.getItem(`teleprompter-${key}`);
+        if (saved === null) return DEFAULT_SETTINGS[key];
+        // Parse booleans and numbers
+        if (saved === 'true') return true;
+        if (saved === 'false') return false;
+        const num = parseFloat(saved);
+        return isNaN(num) ? saved : num;
+    }
+
+    saveSetting(key, value) {
+        localStorage.setItem(`teleprompter-${key}`, value);
+    }
+
+    resetSettings() {
+        // Clear all teleprompter settings except script
+        Object.keys(DEFAULT_SETTINGS).forEach(key => {
+            localStorage.removeItem(`teleprompter-${key}`);
+        });
+        // Re-apply defaults
+        this.applyStoredSettings();
+        // Update UI elements
+        this.updateUIFromSettings();
+    }
+
+    updateUIFromSettings() {
+        const previewText = document.getElementById('preview-text');
+        const previewLine = document.getElementById('preview-line');
+        const speedSlider = document.getElementById('reading-speed');
+        const toleranceSlider = document.getElementById('match-tolerance');
+        const browserLang = document.getElementById('browser-lang');
+
+        // Font size
+        const fontSize = this.getSetting('fontSize');
+        this.fontSizeSlider.value = fontSize;
         this.fontSizeValue.textContent = `${fontSize}px`;
         this.scriptDisplay.style.fontSize = `${fontSize}px`;
-        const previewText = document.getElementById('preview-text');
         if (previewText) previewText.style.fontSize = `${fontSize}px`;
 
-        // Apply scroll margin
-        this.scrollMarginPercent = parseInt(this.scrollMarginSlider.value);
-        this.scrollMarginValue.textContent = `${this.scrollMarginPercent}%`;
-        const previewLine = document.getElementById('preview-line');
-        if (previewLine) previewLine.style.top = `${this.scrollMarginPercent}%`;
+        // Scroll margin
+        const scrollMargin = this.getSetting('scrollMargin');
+        this.scrollMarginSlider.value = scrollMargin;
+        this.scrollMarginPercent = scrollMargin;
+        this.scrollMarginValue.textContent = `${scrollMargin}%`;
+        if (previewLine) previewLine.style.top = `${scrollMargin}%`;
 
-        // Apply reading speed
-        const speedSlider = document.getElementById('reading-speed');
-        this.readingSpeed = parseInt(speedSlider.value);
-        document.getElementById('speed-value').textContent = `${this.readingSpeed} CPM`;
+        // Reading speed
+        const readingSpeed = this.getSetting('readingSpeed');
+        speedSlider.value = readingSpeed;
+        this.readingSpeed = readingSpeed;
+        document.getElementById('speed-value').textContent = `${readingSpeed} CPM`;
 
-        // Apply match tolerance
-        const toleranceSlider = document.getElementById('match-tolerance');
-        this.matchTolerance = parseInt(toleranceSlider.value);
-        document.getElementById('tolerance-value').textContent = `${this.matchTolerance}%`;
+        // Match tolerance
+        const matchTolerance = this.getSetting('matchTolerance');
+        toleranceSlider.value = matchTolerance;
+        this.matchTolerance = matchTolerance;
+        document.getElementById('tolerance-value').textContent = `${matchTolerance}%`;
 
-        // Restore scroll mode from localStorage
-        const savedMode = localStorage.getItem('teleprompter-mode') || 'voice';
-        this.setMode(savedMode, false);
+        // Mirror settings
+        this.mirrorHorizontal.checked = this.getSetting('mirrorHorizontal');
+        this.mirrorVertical.checked = this.getSetting('mirrorVertical');
+        this.updateMirror();
 
-        // Restore speech engine from localStorage
-        const savedEngine = localStorage.getItem('teleprompter-engine') || 'browser';
-        this.setSpeechEngine(savedEngine, false);
+        // Highlight settings
+        this.showHighlight.checked = this.getSetting('showHighlight');
+
+        // Highlight color
+        const highlightColor = this.getSetting('highlightColor');
+        document.documentElement.style.setProperty('--highlight-color', highlightColor);
+        document.getElementById('highlight-color').value = highlightColor;
+        document.querySelectorAll('.color-preset').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.color === highlightColor);
+        });
+
+        // Browser language
+        if (browserLang) {
+            browserLang.value = this.getSetting('browserLang');
+        }
+
+        // Mode and engine
+        this.setMode(this.getSetting('mode'), false);
+        this.setSpeechEngine(this.getSetting('engine'), false);
+
+        // Theme
+        const theme = this.getSetting('theme');
+        this.setTheme(theme, false);
+    }
+
+    setTheme(theme, save = true) {
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else if (theme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+            // System - remove attribute to let CSS media query handle it
+            document.documentElement.removeAttribute('data-theme');
+        }
+        // Update button states
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.theme === theme);
+        });
+        if (save) this.saveSetting('theme', theme);
+    }
+
+    applyStoredSettings() {
+        // Load and apply all settings from localStorage
+        this.updateUIFromSettings();
+
+        // Restore script from localStorage (separate from settings)
+        const savedScript = localStorage.getItem('teleprompter-script');
+        if (savedScript) {
+            this.scriptInput.value = savedScript;
+        }
     }
 
     bindEvents() {
+        // Save script to localStorage on change
+        this.scriptInput.addEventListener('input', () => {
+            localStorage.setItem('teleprompter-script', this.scriptInput.value);
+        });
         this.startBtn.addEventListener('click', () => this.start());
         this.stopBtn.addEventListener('click', () => this.stop());
         this.restartBtn.addEventListener('click', () => this.restart());
+
+        // Reset settings button
+        const resetBtn = document.getElementById('reset-settings-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                if (confirm('Reset all settings to defaults? (Script will be preserved)')) {
+                    this.resetSettings();
+                }
+            });
+        }
 
         this.fontSizeSlider.addEventListener('input', (e) => {
             const size = e.target.value;
             this.fontSizeValue.textContent = `${size}px`;
             this.scriptDisplay.style.fontSize = `${size}px`;
+            this.saveSetting('fontSize', size);
             // Update preview
             const previewText = document.getElementById('preview-text');
             if (previewText) previewText.style.fontSize = `${size}px`;
@@ -134,13 +258,79 @@ class Teleprompter {
         this.scrollMarginSlider.addEventListener('input', (e) => {
             this.scrollMarginPercent = parseInt(e.target.value);
             this.scrollMarginValue.textContent = `${this.scrollMarginPercent}%`;
+            this.saveSetting('scrollMargin', this.scrollMarginPercent);
             // Update preview line position
             const previewLine = document.getElementById('preview-line');
             if (previewLine) previewLine.style.top = `${this.scrollMarginPercent}%`;
         });
 
-        this.mirrorHorizontal.addEventListener('change', () => this.updateMirror());
-        this.mirrorVertical.addEventListener('change', () => this.updateMirror());
+        // Reading speed
+        const speedSlider = document.getElementById('reading-speed');
+        speedSlider.addEventListener('input', (e) => {
+            this.readingSpeed = parseInt(e.target.value);
+            document.getElementById('speed-value').textContent = `${this.readingSpeed} CPM`;
+            this.saveSetting('readingSpeed', this.readingSpeed);
+        });
+
+        // Match tolerance
+        const toleranceSlider = document.getElementById('match-tolerance');
+        toleranceSlider.addEventListener('input', (e) => {
+            this.matchTolerance = parseInt(e.target.value);
+            document.getElementById('tolerance-value').textContent = `${this.matchTolerance}%`;
+            this.saveSetting('matchTolerance', this.matchTolerance);
+        });
+
+        this.mirrorHorizontal.addEventListener('change', () => {
+            this.updateMirror();
+            this.saveSetting('mirrorHorizontal', this.mirrorHorizontal.checked);
+        });
+        this.mirrorVertical.addEventListener('change', () => {
+            this.updateMirror();
+            this.saveSetting('mirrorVertical', this.mirrorVertical.checked);
+        });
+
+        // Browser language
+        const browserLang = document.getElementById('browser-lang');
+        if (browserLang) {
+            browserLang.addEventListener('change', (e) => {
+                this.saveSetting('browserLang', e.target.value);
+            });
+        }
+
+        // Theme toggle
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.setTheme(btn.dataset.theme);
+            });
+        });
+
+        // Color picker
+        const colorInput = document.getElementById('highlight-color');
+        const colorPresets = document.querySelectorAll('.color-preset');
+
+        const setHighlightColor = (color) => {
+            document.documentElement.style.setProperty('--highlight-color', color);
+            colorInput.value = color;
+            this.saveSetting('highlightColor', color);
+            // Update active state on presets
+            colorPresets.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.color === color);
+            });
+        };
+
+        colorPresets.forEach(btn => {
+            btn.addEventListener('click', () => setHighlightColor(btn.dataset.color));
+        });
+
+        colorInput.addEventListener('input', (e) => {
+            setHighlightColor(e.target.value);
+            // Remove active from presets when using custom color
+            colorPresets.forEach(btn => btn.classList.remove('active'));
+        });
+
+        this.showHighlight.addEventListener('change', () => {
+            this.saveSetting('showHighlight', this.showHighlight.checked);
+        });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -280,22 +470,6 @@ class Teleprompter {
         document.getElementById('mode-voice').addEventListener('click', () => this.setMode('voice'));
         document.getElementById('mode-manual').addEventListener('click', () => this.setMode('manual'));
 
-        // Reading speed slider
-        const speedSlider = document.getElementById('reading-speed');
-        const speedValue = document.getElementById('speed-value');
-        speedSlider.addEventListener('input', (e) => {
-            this.readingSpeed = parseInt(e.target.value);
-            speedValue.textContent = `${this.readingSpeed} CPM`;
-        });
-
-        // Match tolerance slider
-        const toleranceSlider = document.getElementById('match-tolerance');
-        const toleranceValue = document.getElementById('tolerance-value');
-        toleranceSlider.addEventListener('input', (e) => {
-            this.matchTolerance = parseInt(e.target.value);
-            toleranceValue.textContent = `${this.matchTolerance}%`;
-        });
-
         // Speech engine toggle
         document.getElementById('engine-browser').addEventListener('click', () => this.setSpeechEngine('browser'));
         document.getElementById('engine-vosk').addEventListener('click', () => this.setSpeechEngine('vosk'));
@@ -317,7 +491,11 @@ class Teleprompter {
         this.mode = mode;
         document.getElementById('mode-voice').classList.toggle('active', mode === 'voice');
         document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
-        if (save) localStorage.setItem('teleprompter-mode', mode);
+        // Disable reading speed slider in voice mode since it's only used for manual scroll
+        const speedGroup = document.getElementById('speed-group');
+        speedGroup.classList.toggle('disabled', mode === 'voice');
+        speedGroup.querySelector('input').disabled = mode === 'voice';
+        if (save) this.saveSetting('mode', mode);
     }
 
     setSpeechEngine(engine, save = true) {
@@ -333,7 +511,7 @@ class Teleprompter {
         } else {
             hint.textContent = 'Offline recognition - requires backend server';
         }
-        if (save) localStorage.setItem('teleprompter-engine', engine);
+        if (save) this.saveSetting('engine', engine);
     }
 
     importMarkdown(file) {
@@ -345,6 +523,7 @@ class Teleprompter {
         const reader = new FileReader();
         reader.onload = (e) => {
             this.scriptInput.value = e.target.result;
+            localStorage.setItem('teleprompter-script', e.target.result);
         };
         reader.onerror = () => {
             alert('Failed to read file.');
@@ -441,6 +620,14 @@ class Teleprompter {
         if (!this.isScrollPaused) {
             if (this.mode === 'voice') {
                 this.recognitionStatus.textContent = 'Listening...';
+                // Restart speech recognition if it stopped while paused
+                if (this.webSpeechRecognition) {
+                    try {
+                        this.webSpeechRecognition.start();
+                    } catch (e) {
+                        // Already running
+                    }
+                }
             } else {
                 this.scheduleNextAdvance();
             }
@@ -558,12 +745,19 @@ class Teleprompter {
                     option.textContent = `${model.language.toUpperCase()} - ${model.name}`;
                     this.modelSelect.appendChild(option);
                 });
+                // Default to English (US) if available
+                for (const option of this.modelSelect.options) {
+                    if (option.textContent.includes('EN-US')) {
+                        this.modelSelect.value = option.value;
+                        break;
+                    }
+                }
             }
         } catch (error) {
             console.error('Failed to load models:', error);
             this.modelSelect.innerHTML = '<option value="">Vosk backend not available</option>';
             voskBtn.disabled = true;
-            voskBtn.title = 'Backend not available';
+            voskBtn.title = `Backend error: ${error.message || error}`;
             voskBtn.textContent = 'Vosk (offline)';
         }
 
@@ -681,16 +875,19 @@ class Teleprompter {
         return new Promise((resolve, reject) => {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${protocol}//${window.location.host}/ws`;
+            console.log('[WS] Connecting to:', wsUrl);
 
             this.ws = new WebSocket(wsUrl);
 
             this.ws.onopen = () => {
+                console.log('[WS] Connection opened');
                 this.connectionStatus.textContent = 'Connected';
                 this.connectionStatus.className = 'connected';
                 resolve();
             };
 
-            this.ws.onclose = () => {
+            this.ws.onclose = (event) => {
+                console.log('[WS] Connection closed:', event.code, event.reason);
                 this.connectionStatus.textContent = 'Disconnected';
                 this.connectionStatus.className = 'disconnected';
                 if (this.isRunning) {
@@ -699,16 +896,17 @@ class Teleprompter {
             };
 
             this.ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
+                console.error('[WS] Error:', error);
                 reject(error);
             };
 
             this.ws.onmessage = (event) => {
+                console.log('[WS] Message received:', event.data.substring(0, 200));
                 try {
                     const data = JSON.parse(event.data);
                     this.handleMessage(data);
                 } catch (e) {
-                    console.error('Invalid JSON from server:', e);
+                    console.error('[WS] Invalid JSON from server:', e);
                 }
             };
         });
@@ -965,20 +1163,41 @@ class Teleprompter {
 
     matchWords(spokenWords) {
         const searchStart = this.currentWordIndex;
-        const searchEnd = Math.min(this.currentWordIndex + 15, this.scriptWords.length);
+        // Smaller window (8 words) to avoid jumping too far ahead
+        const searchEnd = Math.min(this.currentWordIndex + 8, this.scriptWords.length);
 
-        // Try to find 2 consecutive matching words for reliable advancement
-        for (let i = searchStart; i < searchEnd - 1; i++) {
-            const scriptWord1 = this.normalizeWord(this.scriptWords[i]);
-            const scriptWord2 = this.normalizeWord(this.scriptWords[i + 1]);
+        // First, try to match starting at the current position (strong bias for immediate next words)
+        // Check if the first 2 words of script match anywhere in spoken words
+        if (searchStart < this.scriptWords.length - 1) {
+            const scriptWord1 = this.normalizeWord(this.scriptWords[searchStart]);
+            const scriptWord2 = this.normalizeWord(this.scriptWords[searchStart + 1]);
 
-            // Look for consecutive match in spoken words
             for (let j = 0; j < spokenWords.length - 1; j++) {
                 const spoken1 = this.normalizeWord(spokenWords[j]);
                 const spoken2 = this.normalizeWord(spokenWords[j + 1]);
 
                 if (this.wordsMatch(spoken1, scriptWord1) && this.wordsMatch(spoken2, scriptWord2)) {
-                    // Found 2 consecutive matches - advance to after the match
+                    this.markWordAsSpoken(searchStart);
+                    this.markWordAsSpoken(searchStart + 1);
+                    this.currentWordIndex = searchStart + 2;
+                    this.updateProgress();
+                    this.scrollToCurrentWord();
+                    return;
+                }
+            }
+        }
+
+        // Then try looking slightly ahead (but not too far) for recovery if speaker skipped words
+        for (let i = searchStart + 1; i < searchEnd - 1; i++) {
+            const scriptWord1 = this.normalizeWord(this.scriptWords[i]);
+            const scriptWord2 = this.normalizeWord(this.scriptWords[i + 1]);
+
+            for (let j = 0; j < spokenWords.length - 1; j++) {
+                const spoken1 = this.normalizeWord(spokenWords[j]);
+                const spoken2 = this.normalizeWord(spokenWords[j + 1]);
+
+                if (this.wordsMatch(spoken1, scriptWord1) && this.wordsMatch(spoken2, scriptWord2)) {
+                    // Found match ahead - advance to after the match
                     for (let k = this.currentWordIndex; k <= i + 1; k++) {
                         this.markWordAsSpoken(k);
                     }
@@ -1213,6 +1432,19 @@ class Teleprompter {
             return;
         }
 
+        // Check microphone permission before starting voice mode
+        if (this.mode === 'voice' && navigator.permissions) {
+            try {
+                const result = await navigator.permissions.query({ name: 'microphone' });
+                if (result.state === 'denied') {
+                    alert('Microphone access was denied. Please allow microphone access in your browser settings and reload the page.');
+                    return;
+                }
+            } catch (e) {
+                // Permissions API not supported for microphone, continue anyway
+            }
+        }
+
         // Build display (also parses scriptWords)
         this.currentWordIndex = 0;
         this.buildScriptDisplay();
@@ -1401,8 +1633,17 @@ class Teleprompter {
 
                 lines.forEach((line, lineIdx) => {
                     // Record line start (except for first line of first part)
-                    if (lineIdx > 0 && wordIndex > 0) {
-                        this.lineStartIndices.push(wordIndex);
+                    if (lineIdx > 0) {
+                        if (wordIndex > 0) {
+                            this.lineStartIndices.push(wordIndex);
+                        }
+                        // Add line break for visual separation
+                        this.scriptDisplay.appendChild(document.createElement('br'));
+                    }
+
+                    // Handle empty lines (paragraph breaks)
+                    if (!line.trim()) {
+                        return;
                     }
 
                     // Tokenize this line to handle multi-word emphasis spans

@@ -82,7 +82,7 @@
                     <input type="range" id="font-size" min="24" max="120" value="48">
                 </div>
                 <div class="form-group">
-                    <label for="scroll-margin">Scroll Position: <span id="scroll-margin-value">30%</span></label>
+                    <label for="scroll-margin">Scroll Position: <span id="scroll-margin-value">30%</span> <span class="info-icon" data-tooltip="Where on screen the current word sits. Lower = closer to top.">ⓘ</span></label>
                     <input type="range" id="scroll-margin" min="10" max="50" value="30">
                 </div>
             </div>
@@ -101,40 +101,71 @@
             </div>
 
             <div class="form-group" id="speed-group">
-                <label for="reading-speed">Reading Speed: <span id="speed-value">900 CPM</span></label>
+                <label for="reading-speed">Reading Speed: <span id="speed-value">900 CPM</span> <span class="info-icon" data-tooltip="Characters per minute for manual scroll mode. Adjusts how fast the script auto-advances.">ⓘ</span></label>
                 <input type="range" id="reading-speed" min="300" max="2000" step="50" value="900">
             </div>
 
             <div class="form-group" id="tolerance-group">
-                <label for="match-tolerance">Match Tolerance: <span id="tolerance-value">100%</span></label>
+                <label for="match-tolerance">Match Tolerance: <span id="tolerance-value">100%</span> <span class="info-icon" data-tooltip="How strictly words must match. 100% = exact match. Lower values allow fuzzy matching for accents or dialects.">ⓘ</span></label>
                 <input type="range" id="match-tolerance" min="50" max="100" step="5" value="100">
-                <small class="hint">Lower for dialects (Swiss German, etc.)</small>
             </div>
 
-            <div class="form-group checkbox-group">
+            <div class="form-group checkbox-single">
                 <label>
                     <input type="checkbox" id="mirror-horizontal">
                     Mirror Horizontal
                 </label>
+            </div>
+
+            <div class="form-group checkbox-single">
                 <label>
                     <input type="checkbox" id="mirror-vertical">
                     Mirror Vertical
                 </label>
+            </div>
+
+            <div class="form-group checkbox-single">
                 <label>
                     <input type="checkbox" id="show-highlight" checked>
                     Word Highlight
                 </label>
             </div>
 
+            <div class="form-group">
+                <label>Highlight Color:</label>
+                <div class="color-picker-row" id="color-picker-row">
+                    <button type="button" class="color-preset" data-color="#e94560" style="background: #e94560" title="Red"></button>
+                    <button type="button" class="color-preset" data-color="#ffd93d" style="background: #ffd93d" title="Yellow"></button>
+                    <button type="button" class="color-preset" data-color="#4ecca3" style="background: #4ecca3" title="Green"></button>
+                    <button type="button" class="color-preset" data-color="#00d4ff" style="background: #00d4ff" title="Cyan"></button>
+                    <button type="button" class="color-preset" data-color="#a855f7" style="background: #a855f7" title="Purple"></button>
+                    <button type="button" class="color-preset" data-color="#ff6b35" style="background: #ff6b35" title="Orange"></button>
+                    <input type="color" id="highlight-color" value="#e94560" title="Custom color">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Theme:</label>
+                <div class="theme-toggle">
+                    <button type="button" class="theme-btn" data-theme="system">System</button>
+                    <button type="button" class="theme-btn" data-theme="light">Light</button>
+                    <button type="button" class="theme-btn" data-theme="dark">Dark</button>
+                </div>
+            </div>
+
             <div class="button-row">
                 <button id="save-btn">Save</button>
                 <button id="load-btn">Load</button>
-                <button id="start-btn" class="primary">Start Teleprompter</button>
+                <button id="reset-settings-btn" class="link-btn">Reset Settings</button>
             </div>
 
             <div id="status-bar">
                 <span id="connection-status">Ready</span>
                 <span id="recognition-status"></span>
+            </div>
+
+            <div class="start-row">
+                <button id="start-btn" class="primary">Start Teleprompter</button>
             </div>
         </div>
 

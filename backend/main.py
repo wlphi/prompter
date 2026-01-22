@@ -207,15 +207,19 @@ async def websocket_endpoint(websocket: WebSocket):
     - Server sends: {"type": "partial", "text": "...", "words": [...]}
     - Server sends: {"type": "final", "text": "...", "words": [...]}
     """
+    print("[WS] Client connecting...")
     await websocket.accept()
+    print("[WS] Client connected")
 
     recognizer: KaldiRecognizer | None = None
 
     try:
         while True:
             message = await websocket.receive()
+            print(f"[WS] Received message type: {list(message.keys())}")
 
             if "text" in message:
+                print(f"[WS] Text message: {message['text'][:200]}")
                 # JSON control message
                 data = json.loads(message["text"])
                 msg_type = data.get("type")
@@ -264,13 +268,16 @@ async def websocket_endpoint(websocket: WebSocket):
             elif "bytes" in message:
                 # Binary audio data
                 if recognizer is None:
+                    print("[WS] Received bytes but no recognizer initialized")
                     continue
 
                 audio_data = message["bytes"]
+                print(f"[WS] Received {len(audio_data)} bytes of audio")
 
                 if recognizer.AcceptWaveform(audio_data):
                     result = json.loads(recognizer.Result())
                     text = result.get("text", "").strip()
+                    print(f"[WS] Final result: {text}")
                     if text:
                         await websocket.send_text(json.dumps({
                             "type": "final",
@@ -281,6 +288,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     partial = json.loads(recognizer.PartialResult())
                     text = partial.get("partial", "").strip()
                     if text:
+                        print(f"[WS] Partial result: {text}")
                         await websocket.send_text(json.dumps({
                             "type": "partial",
                             "text": text,
@@ -288,8 +296,9 @@ async def websocket_endpoint(websocket: WebSocket):
                         }))
 
     except WebSocketDisconnect:
-        pass
+        print("[WS] Client disconnected")
     except Exception as e:
+        print(f"[WS] Error: {e}")
         try:
             await websocket.send_text(json.dumps({
                 "type": "error",
