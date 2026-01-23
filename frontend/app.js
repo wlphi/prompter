@@ -1300,7 +1300,14 @@ class Teleprompter {
         const searchEnd = Math.min(this.currentWordIndex + 15, this.scriptWords.length);
 
         // Try to find 2 consecutive matching words for reliable advancement
-        for (let i = searchStart; i < searchEnd - 1; i++) {
+        // Search in progressive pairs: [0,1], [2,3], [4,5]... to prioritize proximity
+        const windowSize = searchEnd - searchStart;
+
+        for (let pairIndex = 0; pairIndex < Math.floor(windowSize / 2); pairIndex++) {
+            const i = searchStart + (pairIndex * 2);
+
+            if (i >= searchEnd - 1) break;
+
             const scriptWord1 = this.normalizeWord(this.scriptWords[i]);
             const scriptWord2 = this.normalizeWord(this.scriptWords[i + 1]);
 
@@ -1315,6 +1322,29 @@ class Teleprompter {
                         this.markWordAsSpoken(k);
                     }
                     this.currentWordIndex = i + 2;
+                    this.updateProgress();
+                    this.scrollToCurrentWord();
+                    return; // Immediate return on first match
+                }
+            }
+        }
+
+        // Handle final position if window size is odd
+        if (windowSize % 2 === 1 && windowSize > 1) {
+            const finalPos = searchEnd - 2;
+
+            const scriptWord1 = this.normalizeWord(this.scriptWords[finalPos]);
+            const scriptWord2 = this.normalizeWord(this.scriptWords[finalPos + 1]);
+
+            for (let j = 0; j < spokenWords.length - 1; j++) {
+                const spoken1 = this.normalizeWord(spokenWords[j]);
+                const spoken2 = this.normalizeWord(spokenWords[j + 1]);
+
+                if (this.wordsMatch(spoken1, scriptWord1) && this.wordsMatch(spoken2, scriptWord2)) {
+                    for (let k = this.currentWordIndex; k <= finalPos + 1; k++) {
+                        this.markWordAsSpoken(k);
+                    }
+                    this.currentWordIndex = finalPos + 2;
                     this.updateProgress();
                     this.scrollToCurrentWord();
                     return;
