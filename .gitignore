@@ -2,4 +2,6 @@ backend/venv/
 backend/models/
 backend/scripts/
 backend/__pycache__/
+backend/.env
+backend/logs/
 *.pyc

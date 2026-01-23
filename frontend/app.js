@@ -74,39 +74,139 @@ class Teleprompter {
         this.mediaStream = null;
         this.processor = null;
 
+        // Theme preference
+        this.themePreference = 'dark';
+
+        // Error tracking
+        this.networkErrorShown = false;
+        this.storageQuotaWarningShown = false;
+        this.localStorageAvailable = true;
+
         this.init();
     }
 
     async init() {
         this.bindEvents();
+        this.checkLocalStorage();
         this.applyStoredSettings();
         await this.loadModels();
         await this.checkUrlForScript();
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            // Only update if theme preference is 'system'
+            if (this.themePreference === 'system') {
+                const effectiveTheme = e.matches ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', effectiveTheme);
+            }
+        });
+    }
+
+    checkLocalStorage() {
+        // Check if localStorage is available
+        try {
+            localStorage.setItem('test', 'test');
+            localStorage.removeItem('test');
+            this.localStorageAvailable = true;
+        } catch (e) {
+            this.localStorageAvailable = false;
+            this.showInfo(
+                'Settings Won\'t Be Saved',
+                'Your browser is in private/incognito mode or has storage disabled.',
+                'Settings will work during this session but won\'t be remembered after closing the tab.'
+            );
+        }
+    }
+
+    safeSetLocalStorage(key, value) {
+        if (!this.localStorageAvailable) return;
+
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) {
+            if (e.name === 'QuotaExceededError') {
+                // Only show warning once
+                if (!this.storageQuotaWarningShown) {
+                    this.showWarning(
+                        'Settings Storage Full',
+                        'Your browser\'s storage is full. Settings may not be saved.',
+                        'Clear some browser data or continue without saving settings.'
+                    );
+                    this.storageQuotaWarningShown = true;
+                }
+            }
+        }
     }
 
     applyStoredSettings() {
-        // Apply font size from slider (browser may have restored it)
-        const fontSize = this.fontSizeSlider.value;
-        this.fontSizeValue.textContent = `${fontSize}px`;
-        this.scriptDisplay.style.fontSize = `${fontSize}px`;
-        const previewText = document.getElementById('preview-text');
-        if (previewText) previewText.style.fontSize = `${fontSize}px`;
+        // Restore font size
+        const savedFontSize = localStorage.getItem('teleprompter-fontSize');
+        if (savedFontSize) {
+            this.fontSizeSlider.value = savedFontSize;
+            this.fontSizeValue.textContent = `${savedFontSize}px`;
+            this.scriptDisplay.style.fontSize = `${savedFontSize}px`;
+            const previewText = document.getElementById('preview-text');
+            if (previewText) previewText.style.fontSize = `${savedFontSize}px`;
+        } else {
+            const fontSize = this.fontSizeSlider.value;
+            this.fontSizeValue.textContent = `${fontSize}px`;
+            this.scriptDisplay.style.fontSize = `${fontSize}px`;
+            const previewText = document.getElementById('preview-text');
+            if (previewText) previewText.style.fontSize = `${fontSize}px`;
+        }
 
-        // Apply scroll margin
-        this.scrollMarginPercent = parseInt(this.scrollMarginSlider.value);
-        this.scrollMarginValue.textContent = `${this.scrollMarginPercent}%`;
-        const previewLine = document.getElementById('preview-line');
-        if (previewLine) previewLine.style.top = `${this.scrollMarginPercent}%`;
+        // Restore scroll margin
+        const savedScrollMargin = localStorage.getItem('teleprompter-scrollMargin');
+        if (savedScrollMargin) {
+            this.scrollMarginSlider.value = savedScrollMargin;
+            this.scrollMarginPercent = parseInt(savedScrollMargin);
+            this.scrollMarginValue.textContent = `${this.scrollMarginPercent}%`;
+            const previewLine = document.getElementById('preview-line');
+            if (previewLine) previewLine.style.top = `${this.scrollMarginPercent}%`;
+        } else {
+            this.scrollMarginPercent = parseInt(this.scrollMarginSlider.value);
+            this.scrollMarginValue.textContent = `${this.scrollMarginPercent}%`;
+            const previewLine = document.getElementById('preview-line');
+            if (previewLine) previewLine.style.top = `${this.scrollMarginPercent}%`;
+        }
 
-        // Apply reading speed
+        // Restore reading speed
         const speedSlider = document.getElementById('reading-speed');
-        this.readingSpeed = parseInt(speedSlider.value);
+        const savedSpeed = localStorage.getItem('teleprompter-readingSpeed');
+        if (savedSpeed) {
+            speedSlider.value = savedSpeed;
+            this.readingSpeed = parseInt(savedSpeed);
+        } else {
+            this.readingSpeed = parseInt(speedSlider.value);
+        }
         document.getElementById('speed-value').textContent = `${this.readingSpeed} CPM`;
 
-        // Apply match tolerance
+        // Restore match tolerance
         const toleranceSlider = document.getElementById('match-tolerance');
-        this.matchTolerance = parseInt(toleranceSlider.value);
+        const savedTolerance = localStorage.getItem('teleprompter-matchTolerance');
+        if (savedTolerance) {
+            toleranceSlider.value = savedTolerance;
+            this.matchTolerance = parseInt(savedTolerance);
+        } else {
+            this.matchTolerance = parseInt(toleranceSlider.value);
+        }
         document.getElementById('tolerance-value').textContent = `${this.matchTolerance}%`;
+
+        // Restore mirror settings
+        const savedMirrorH = localStorage.getItem('teleprompter-mirrorHorizontal');
+        if (savedMirrorH !== null) {
+            this.mirrorHorizontal.checked = savedMirrorH === 'true';
+        }
+        const savedMirrorV = localStorage.getItem('teleprompter-mirrorVertical');
+        if (savedMirrorV !== null) {
+            this.mirrorVertical.checked = savedMirrorV === 'true';
+        }
+
+        // Restore show highlight
+        const savedShowHighlight = localStorage.getItem('teleprompter-showHighlight');
+        if (savedShowHighlight !== null) {
+            this.showHighlight.checked = savedShowHighlight === 'true';
+        }
 
         // Restore scroll mode from localStorage
         const savedMode = localStorage.getItem('teleprompter-mode') || 'voice';
@@ -115,6 +215,15 @@ class Teleprompter {
         // Restore speech engine from localStorage
         const savedEngine = localStorage.getItem('teleprompter-engine') || 'browser';
         this.setSpeechEngine(savedEngine, false);
+
+        // Restore theme from localStorage
+        const savedTheme = localStorage.getItem('teleprompter-theme') || 'dark';
+        this.setTheme(savedTheme, false);
+
+        // Restore highlight color from localStorage
+        const savedColor = localStorage.getItem('teleprompter-highlightColor') || '#e94560';
+        document.getElementById('highlight-color').value = savedColor;
+        this.setHighlightColor(savedColor, false);
     }
 
     bindEvents() {
@@ -129,6 +238,7 @@ class Teleprompter {
             // Update preview
             const previewText = document.getElementById('preview-text');
             if (previewText) previewText.style.fontSize = `${size}px`;
+            this.safeSetLocalStorage('teleprompter-fontSize', size);
         });
 
         this.scrollMarginSlider.addEventListener('input', (e) => {
@@ -137,10 +247,21 @@ class Teleprompter {
             // Update preview line position
             const previewLine = document.getElementById('preview-line');
             if (previewLine) previewLine.style.top = `${this.scrollMarginPercent}%`;
+            this.safeSetLocalStorage('teleprompter-scrollMargin', this.scrollMarginPercent);
         });
 
-        this.mirrorHorizontal.addEventListener('change', () => this.updateMirror());
-        this.mirrorVertical.addEventListener('change', () => this.updateMirror());
+        this.mirrorHorizontal.addEventListener('change', () => {
+            this.updateMirror();
+            this.safeSetLocalStorage('teleprompter-mirrorHorizontal', this.mirrorHorizontal.checked);
+        });
+        this.mirrorVertical.addEventListener('change', () => {
+            this.updateMirror();
+            this.safeSetLocalStorage('teleprompter-mirrorVertical', this.mirrorVertical.checked);
+        });
+
+        this.showHighlight.addEventListener('change', () => {
+            this.safeSetLocalStorage('teleprompter-showHighlight', this.showHighlight.checked);
+        });
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -228,6 +349,9 @@ class Teleprompter {
         this.saveBtn.addEventListener('click', () => this.saveScript());
         this.loadBtn.addEventListener('click', () => this.showLoadModal());
 
+        // Reset Settings button
+        document.getElementById('reset-settings-btn').addEventListener('click', () => this.resetSettings());
+
         // Save modal
         document.getElementById('close-save-modal').addEventListener('click', () => {
             this.saveModal.classList.add('hidden');
@@ -286,6 +410,7 @@ class Teleprompter {
         speedSlider.addEventListener('input', (e) => {
             this.readingSpeed = parseInt(e.target.value);
             speedValue.textContent = `${this.readingSpeed} CPM`;
+            this.safeSetLocalStorage('teleprompter-readingSpeed', this.readingSpeed);
         });
 
         // Match tolerance slider
@@ -294,11 +419,31 @@ class Teleprompter {
         toleranceSlider.addEventListener('input', (e) => {
             this.matchTolerance = parseInt(e.target.value);
             toleranceValue.textContent = `${this.matchTolerance}%`;
+            this.safeSetLocalStorage('teleprompter-matchTolerance', this.matchTolerance);
         });
 
         // Speech engine toggle
         document.getElementById('engine-browser').addEventListener('click', () => this.setSpeechEngine('browser'));
         document.getElementById('engine-vosk').addEventListener('click', () => this.setSpeechEngine('vosk'));
+
+        // Theme toggle
+        document.getElementById('theme-dark').addEventListener('click', () => this.setTheme('dark'));
+        document.getElementById('theme-light').addEventListener('click', () => this.setTheme('light'));
+        document.getElementById('theme-system').addEventListener('click', () => this.setTheme('system'));
+
+        // Highlight color picker
+        document.getElementById('highlight-color').addEventListener('input', (e) => {
+            this.setHighlightColor(e.target.value);
+        });
+
+        // Color presets
+        document.querySelectorAll('.color-preset').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const color = btn.getAttribute('data-color');
+                document.getElementById('highlight-color').value = color;
+                this.setHighlightColor(color);
+            });
+        });
 
         // Import/Export .md files
         document.getElementById('import-md-btn').addEventListener('click', () => {
@@ -317,7 +462,7 @@ class Teleprompter {
         this.mode = mode;
         document.getElementById('mode-voice').classList.toggle('active', mode === 'voice');
         document.getElementById('mode-manual').classList.toggle('active', mode === 'manual');
-        if (save) localStorage.setItem('teleprompter-mode', mode);
+        if (save) this.safeSetLocalStorage('teleprompter-mode', mode);
     }
 
     setSpeechEngine(engine, save = true) {
@@ -333,13 +478,45 @@ class Teleprompter {
         } else {
             hint.textContent = 'Offline recognition - requires backend server';
         }
-        if (save) localStorage.setItem('teleprompter-engine', engine);
+        if (save) this.safeSetLocalStorage('teleprompter-engine', engine);
+    }
+
+    setTheme(theme, save = true) {
+        // Store the preference (dark, light, or system)
+        this.themePreference = theme;
+
+        // Update button states
+        document.getElementById('theme-dark').classList.toggle('active', theme === 'dark');
+        document.getElementById('theme-light').classList.toggle('active', theme === 'light');
+        document.getElementById('theme-system').classList.toggle('active', theme === 'system');
+
+        // Determine effective theme
+        let effectiveTheme = theme;
+        if (theme === 'system') {
+            // Check system preference
+            effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+
+        // Apply theme to document
+        document.documentElement.setAttribute('data-theme', effectiveTheme);
+
+        if (save) this.safeSetLocalStorage('teleprompter-theme', theme);
+    }
+
+    setHighlightColor(color, save = true) {
+        // Apply color to CSS custom property
+        document.documentElement.style.setProperty('--highlight-color', color);
+        if (save) this.safeSetLocalStorage('teleprompter-highlightColor', color);
     }
 
     importMarkdown(file) {
         const MAX_SIZE = 5 * 1024 * 1024; // 5MB
         if (file.size > MAX_SIZE) {
-            alert('File too large. Maximum 5MB.');
+            this.showError(
+                'File Too Large',
+                'The file you selected is larger than 5MB.',
+                'Try a smaller file or copy the text manually instead.'
+            );
             return;
         }
         const reader = new FileReader();
@@ -347,7 +524,11 @@ class Teleprompter {
             this.scriptInput.value = e.target.result;
         };
         reader.onerror = () => {
-            alert('Failed to read file.');
+            this.showError(
+                'Failed to Read File',
+                'Could not read the file you selected.',
+                'Make sure the file isn\'t corrupted and try again.'
+            );
         };
         reader.readAsText(file);
     }
@@ -501,10 +682,18 @@ class Teleprompter {
 
             const data = await response.json();
             this.scriptInput.value = data.script;
-            alert(`Imported notes from ${data.slideCount} slides`);
+            this.showInfo(
+                'PPTX Import Successful',
+                `Imported notes from ${data.slideCount} slides.`,
+                'Review the imported text and make any needed adjustments before starting.'
+            );
 
         } catch (error) {
-            alert(`Import failed: ${error.message}`);
+            this.showError(
+                'PPTX Import Failed',
+                'Could not extract notes from the PowerPoint file.',
+                'Make sure the file contains speaker notes. Only .pptx files (not .ppt) are supported.'
+            );
         } finally {
             btn.textContent = originalText;
             btn.disabled = false;
@@ -522,6 +711,119 @@ class Teleprompter {
     updateFullscreenButton() {
         const btn = document.getElementById('fullscreen-btn');
         btn.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
+    }
+
+    showError(title, message, suggestion) {
+        this.showModal('error', title, message, suggestion);
+    }
+
+    showWarning(title, message, suggestion) {
+        this.showModal('warning', title, message, suggestion);
+    }
+
+    showInfo(title, message, suggestion) {
+        this.showModal('info', title, message, suggestion);
+    }
+
+    showModal(type, title, message, suggestion) {
+        // Remove existing error modal if any
+        const existingModal = document.getElementById('error-modal');
+        if (existingModal) existingModal.remove();
+
+        // Create modal
+        const modal = document.createElement('div');
+        modal.id = 'error-modal';
+        modal.className = 'modal';
+
+        const iconMap = {
+            error: '❌',
+            warning: '⚠️',
+            info: 'ℹ️'
+        };
+
+        const suggestionHtml = suggestion ? `<p class="error-suggestion">${suggestion}</p>` : '';
+
+        modal.innerHTML = `
+            <div class="modal-content error-modal-content">
+                <div class="error-icon ${type}">${iconMap[type]}</div>
+                <h2>${title}</h2>
+                <p class="error-message">${message}</p>
+                ${suggestionHtml}
+                <button class="primary" id="close-error-modal">Got it</button>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Close on button click
+        document.getElementById('close-error-modal').addEventListener('click', () => {
+            modal.remove();
+        });
+
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+
+        // Close on Escape key
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    }
+
+    resetSettings() {
+        if (!confirm('Reset all settings to defaults? (Your script will not be cleared)')) {
+            return;
+        }
+
+        // Clear all teleprompter localStorage keys
+        const keysToRemove = [
+            'teleprompter-fontSize',
+            'teleprompter-scrollMargin',
+            'teleprompter-readingSpeed',
+            'teleprompter-matchTolerance',
+            'teleprompter-mirrorHorizontal',
+            'teleprompter-mirrorVertical',
+            'teleprompter-showHighlight',
+            'teleprompter-mode',
+            'teleprompter-engine',
+            'teleprompter-theme',
+            'teleprompter-highlightColor'
+        ];
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+
+        // Reset sliders to their HTML default values
+        this.fontSizeSlider.value = 48;
+        this.scrollMarginSlider.value = 30;
+        document.getElementById('reading-speed').value = 900;
+        document.getElementById('match-tolerance').value = 100;
+
+        // Reset checkboxes to their HTML default values
+        this.mirrorHorizontal.checked = false;
+        this.mirrorVertical.checked = false;
+        this.showHighlight.checked = true;
+
+        // Reset mode and engine to defaults
+        this.setMode('voice', false);
+        this.setSpeechEngine('browser', false);
+
+        // Reset theme and highlight color to defaults
+        this.setTheme('dark', false);
+        document.getElementById('highlight-color').value = '#e94560';
+        this.setHighlightColor('#e94560', false);
+
+        // Apply the default settings
+        this.applyStoredSettings();
+
+        this.showInfo(
+            'Settings Reset',
+            'All settings have been reset to their default values.',
+            'Your script text has been preserved.'
+        );
     }
 
     async loadModels() {
@@ -588,7 +890,11 @@ class Teleprompter {
     async saveScript() {
         const script = this.scriptInput.value.trim();
         if (!script) {
-            alert('Enter a script first');
+            this.showError(
+                'No Script to Save',
+                'Please enter your script before saving.',
+                'Type or paste your script in the text box above.'
+            );
             return;
         }
 
@@ -625,7 +931,11 @@ class Teleprompter {
             this.saveModal.classList.remove('hidden');
         } catch (error) {
             console.error('Save failed:', error);
-            alert('Failed to save script');
+            this.showError(
+                'Save Failed',
+                'Could not save your script to the server.',
+                'The server might be down or your connection was lost. Try saving again in a moment.'
+            );
         }
     }
 
@@ -671,9 +981,11 @@ class Teleprompter {
 
             this.loadModal.classList.add('hidden');
         } catch (error) {
-            const errorEl = document.getElementById('load-error');
-            errorEl.textContent = 'Script not found';
-            errorEl.classList.remove('hidden');
+            this.showError(
+                'Script Not Found',
+                `No script exists with code "${code}".`,
+                'Scripts expire after 30 days. Check if you entered the code correctly, or save your script again.'
+            );
         }
     }
 
@@ -729,7 +1041,11 @@ class Teleprompter {
 
             case 'error':
                 console.error('Server error:', data.message);
-                alert(`Error: ${data.message}`);
+                this.showError(
+                    'Server Error',
+                    data.message || 'An error occurred while processing audio.',
+                    'Try restarting the teleprompter or check the backend server logs.'
+                );
                 break;
 
             case 'partial':
@@ -930,10 +1246,26 @@ class Teleprompter {
             console.error('Speech recognition error:', event.error);
             if (event.error === 'not-allowed') {
                 this.recognitionStatus.textContent = 'Microphone access denied';
+                this.showError(
+                    'Microphone Access Required',
+                    'The teleprompter needs microphone access to track your speech.',
+                    'Click the 🔒 icon in your browser\'s address bar and allow microphone access, then restart.'
+                );
             } else if (event.error === 'no-speech') {
                 // Restart on no-speech
                 if (this.isRunning) {
                     this.webSpeechRecognition.start();
+                }
+            } else if (event.error === 'network') {
+                this.recognitionStatus.textContent = 'Speech recognition offline';
+                // Only show warning once
+                if (!this.networkErrorShown) {
+                    this.showWarning(
+                        'Voice Recognition Unavailable',
+                        'Browser speech recognition requires internet access.',
+                        'Check your connection or switch to Vosk (offline) mode in settings.'
+                    );
+                    this.networkErrorShown = true;
                 }
             } else {
                 this.recognitionStatus.textContent = `Error: ${event.error}`;
@@ -1209,7 +1541,11 @@ class Teleprompter {
     async start() {
         const script = this.scriptInput.value.trim();
         if (!script) {
-            alert('Please enter a script first.');
+            this.showError(
+                'No Script Found',
+                'Please enter or paste your script in the text box above before starting.',
+                'Try pasting some text or use "Import PPTX" to load notes from a presentation.'
+            );
             return;
         }
 
@@ -1229,7 +1565,11 @@ class Teleprompter {
                     // Use Vosk backend
                     const modelPath = this.modelSelect.value;
                     if (!modelPath) {
-                        alert('Please select a language model.');
+                        this.showError(
+                            'No Model Selected',
+                            'Please select a language model from the dropdown.',
+                            'Choose a model that matches the language you\'ll be speaking.'
+                        );
                         return;
                     }
 
@@ -1243,17 +1583,34 @@ class Teleprompter {
                 }
             } catch (error) {
                 console.error('Start error:', error);
-                let msg = error?.message || String(error) || 'Unknown error';
-                if (error?.name === 'NotAllowedError') {
-                    msg = 'Microphone access denied. Please allow microphone access and try again.';
-                } else if (error?.name === 'NotFoundError') {
-                    msg = 'No microphone found. Please connect a microphone and try again.';
-                } else if (error?.name === 'NotSupportedError') {
-                    msg = 'Speech recognition not supported in this browser. Try Chrome or Edge.';
-                }
-                alert(`Failed to start: ${msg}`);
                 this.stopAudioCapture();
                 this.stopWebSpeechRecognition();
+
+                if (error?.name === 'NotAllowedError') {
+                    this.showError(
+                        'Microphone Access Required',
+                        'The teleprompter needs microphone access to track your speech.',
+                        'Click the 🔒 icon in your browser\'s address bar and allow microphone access, then try again.'
+                    );
+                } else if (error?.name === 'NotFoundError') {
+                    this.showError(
+                        'No Microphone Detected',
+                        'Your device doesn\'t have a microphone connected.',
+                        'Connect a microphone or use Manual Scroll mode instead (under Scroll Mode settings).'
+                    );
+                } else if (error?.name === 'NotSupportedError') {
+                    this.showError(
+                        'Browser Not Supported',
+                        'Voice recognition isn\'t available in this browser.',
+                        'Try using Chrome or Edge for voice mode, or switch to Manual Scroll mode which works in all browsers.'
+                    );
+                } else {
+                    this.showError(
+                        'Failed to Start',
+                        error?.message || 'An unknown error occurred while starting the teleprompter.',
+                        'Try refreshing the page or check the browser console for more details.'
+                    );
+                }
                 return;
             }
         } else {

@@ -42,7 +42,7 @@
             </div>
 
             <div class="form-group">
-                <label>Speech Engine:</label>
+                <label><span>Speech Engine:</span> <span class="info-icon" title="Browser = easy setup (Chrome/Edge only), Vosk = offline recognition (requires model download)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span></label>
                 <div class="mode-toggle">
                     <button type="button" id="engine-browser" class="mode-btn active">Browser (easy)</button>
                     <button type="button" id="engine-vosk" class="mode-btn">Vosk (offline)</button>
@@ -60,10 +60,10 @@
             <div class="form-group" id="browser-lang-group">
                 <label for="browser-lang">Language:</label>
                 <select id="browser-lang">
+                    <option value="en-US" selected>English (US)</option>
+                    <option value="en-GB">English (UK)</option>
                     <option value="de-DE">German (Deutsch)</option>
                     <option value="de-CH">German - Swiss (Schweizerdeutsch)</option>
-                    <option value="en-US">English (US)</option>
-                    <option value="en-GB">English (UK)</option>
                     <option value="fr-FR">French (Français)</option>
                     <option value="it-IT">Italian (Italiano)</option>
                     <option value="es-ES">Spanish (Español)</option>
@@ -78,11 +78,11 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="font-size">Font Size: <span id="font-size-value">48px</span></label>
+                    <label for="font-size"><span>Font Size:</span> <span id="font-size-value">48px</span> <span class="info-icon" title="Size of text during presentation. Larger = easier to read from distance"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span></label>
                     <input type="range" id="font-size" min="24" max="120" value="48">
                 </div>
                 <div class="form-group">
-                    <label for="scroll-margin">Scroll Position: <span id="scroll-margin-value">30%</span></label>
+                    <label for="scroll-margin"><span>Scroll Position:</span> <span id="scroll-margin-value">30%</span> <span class="info-icon" title="Where the current word appears on screen. Lower = more context visible above"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span></label>
                     <input type="range" id="scroll-margin" min="10" max="50" value="30">
                 </div>
             </div>
@@ -93,7 +93,7 @@
             </div>
 
             <div class="form-group">
-                <label>Scroll Mode:</label>
+                <label><span>Scroll Mode:</span> <span class="info-icon" title="Voice Follow = tracks your speech, Manual Scroll = auto-advances at set speed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span></label>
                 <div class="mode-toggle">
                     <button type="button" id="mode-voice" class="mode-btn active">Voice Follow</button>
                     <button type="button" id="mode-manual" class="mode-btn">Manual Scroll</button>
@@ -101,32 +101,60 @@
             </div>
 
             <div class="form-group" id="speed-group">
-                <label for="reading-speed">Reading Speed: <span id="speed-value">900 CPM</span></label>
+                <label for="reading-speed"><span>Reading Speed:</span> <span id="speed-value">900 CPM</span> <span class="info-icon" title="Characters per minute in manual mode. Adjust with ↑↓ arrows during presentation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span></label>
                 <input type="range" id="reading-speed" min="300" max="2000" step="50" value="900">
             </div>
 
             <div class="form-group" id="tolerance-group">
-                <label for="match-tolerance">Match Tolerance: <span id="tolerance-value">100%</span></label>
+                <label for="match-tolerance"><span>Match Tolerance:</span> <span id="tolerance-value">100%</span> <span class="info-icon" title="100% = exact match only. Lower (70-90%) helps with accents or dialect differences"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span></label>
                 <input type="range" id="match-tolerance" min="50" max="100" step="5" value="100">
                 <small class="hint">Lower for dialects (Swiss German, etc.)</small>
+            </div>
+
+            <div class="form-group">
+                <label><span>Theme:</span> <span class="info-icon" title="Dark = easy on eyes, Light = better for video recording, System = follows your OS"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span></label>
+                <div class="mode-toggle">
+                    <button type="button" id="theme-dark" class="mode-btn active">Dark</button>
+                    <button type="button" id="theme-light" class="mode-btn">Light</button>
+                    <button type="button" id="theme-system" class="mode-btn">System</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="highlight-color"><span>Highlight Color:</span> <span class="info-icon" title="Color used to highlight the current word. Choose high-contrast colors for better visibility"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span></label>
+                <div class="color-picker-group">
+                    <input type="color" id="highlight-color" value="#e94560">
+                    <div class="color-presets">
+                        <button type="button" class="color-preset" data-color="#e94560" style="background: #e94560;" title="Red (default)"></button>
+                        <button type="button" class="color-preset" data-color="#4ecca3" style="background: #4ecca3;" title="Green"></button>
+                        <button type="button" class="color-preset" data-color="#ffd93d" style="background: #ffd93d;" title="Yellow"></button>
+                        <button type="button" class="color-preset" data-color="#ff6b6b" style="background: #ff6b6b;" title="Bright Red"></button>
+                        <button type="button" class="color-preset" data-color="#6c5ce7" style="background: #6c5ce7;" title="Purple"></button>
+                        <button type="button" class="color-preset" data-color="#00b4d8" style="background: #00b4d8;" title="Blue"></button>
+                    </div>
+                </div>
             </div>
 
             <div class="form-group checkbox-group">
                 <label>
                     <input type="checkbox" id="mirror-horizontal">
-                    Mirror Horizontal
+                    <span>Mirror Horizontal</span>
+                    <span class="info-icon" title="Flip text left-to-right. Useful for teleprompter mirrors or recording setups"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span>
                 </label>
                 <label>
                     <input type="checkbox" id="mirror-vertical">
-                    Mirror Vertical
+                    <span>Mirror Vertical</span>
+                    <span class="info-icon" title="Flip text upside-down. Useful for specialized recording setups"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span>
                 </label>
                 <label>
                     <input type="checkbox" id="show-highlight" checked>
-                    Word Highlight
+                    <span>Word Highlight</span>
+                    <span class="info-icon" title="Disable for cleaner look. Current word will be underlined instead of highlighted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><circle cx="12" cy="8" r="0.5" fill="currentColor"/></svg></span>
                 </label>
             </div>
 
             <div class="button-row">
+                <button id="reset-settings-btn">Reset Settings</button>
                 <button id="save-btn">Save</button>
                 <button id="load-btn">Load</button>
                 <button id="start-btn" class="primary">Start Teleprompter</button>
